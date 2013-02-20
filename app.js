@@ -439,13 +439,18 @@ var wellnessAPI =(function(wellnessAPI) {
 			} 
 		).done(cb);
 	};
+	
+	_getSleepData =	function() {
+    var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
+    graphUI.clearLineGraph('heartlinegraph');
+    graphUI.clearLineGraph('sleepstagegraph');
+    _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
+  };
 
 	_init = function() {
 		var today = new Date();
 		currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
-		var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
-		// _getData('beddit/api/user/slmnn/' + daypath + '/sleep/');
-		_getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/');
+		_getSleepData();
  	 	resizeCanvas = function (id, height){          
 			canvas = document.getElementById(id);
 			if (canvas.width  < window.innerWidth) {
@@ -502,12 +507,7 @@ var wellnessAPI =(function(wellnessAPI) {
 				}
 			);
 		},
-    getSleepData: function() {
-      var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
-      graphUI.clearLineGraph('heartlinegraph');
-      graphUI.clearLineGraph('sleepstagegraph');
-      _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
-    }
+    getSleepData: _getSleepData,
 		getData: _getData
 	}
 }());
