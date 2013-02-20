@@ -2,19 +2,12 @@ var currentday;
 
 function prevDay() {
 	currentday = new Date(currentday.getTime() - (24 * 60 * 60 * 1000));
-	var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
-	wellnessAPI.clearLineGraph('heartlinegraph');
-	wellnessAPI.clearLineGraph('sleepstagegraph');
-//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
-	wellnessAPI.getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/');
+  wellnessAPI.getSleepData();
 };
 
 function nextDay() {
 	currentday = new Date(currentday.getTime() + (24 * 60 * 60 * 1000));
-	var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
-	wellnessAPI.clearLineGraph('heartlinegraph');
-	wellnessAPI.clearLineGraph('sleepstagegraph');
-	wellnessAPI.getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/');
+  wellnessAPI.getSleepData();
 //	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 };
 
@@ -90,7 +83,7 @@ var sleepData = (function(sleepData) {
 var wellnessAPI =(function(wellnessAPI) {
 	var baseurl = 'https://wellness.cs.tut.fi/';
 
-	wellnessCB = function(data) {
+	_sleepCB = function(data) {
 		var json = $.parseJSON(data);
 		for(var i = 0; i < json.data.length; i++) {
 			var data = json.data[i];
@@ -478,7 +471,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		return gauge;
 	};
 
-	_getData = function(apicall) {
+	_getData = function(apicall, cb) {
 		var myurl = baseurl + apicall;
 		$.ajax(
 			{
@@ -489,7 +482,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	        "Authorization": userData.credentials
    			}
 			} 
-		).done(wellnessCB);
+		).done(cb);
 	};
 
 	_init = function() {
@@ -557,6 +550,12 @@ var wellnessAPI =(function(wellnessAPI) {
 				}
 			);
 		},
+    getSleepData: function() {
+      var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
+      wellnessAPI.clearLineGraph('heartlinegraph');
+      wellnessAPI.clearLineGraph('sleepstagegraph');
+      _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
+    }
 		getData: _getData,
 		drawGraphs: _drawGraphs
 	}
