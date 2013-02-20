@@ -80,77 +80,8 @@ var sleepData = (function(sleepData) {
 	}
 }());
 
-var wellnessAPI =(function(wellnessAPI) {
-	var baseurl = 'https://wellness.cs.tut.fi/';
-
-	_sleepCB = function(data) {
-		var json = $.parseJSON(data);
-		for(var i = 0; i < json.data.length; i++) {
-			var data = json.data[i];
-			if(data.analysis_valid == false) {
-				var x = document.getElementById("datetext");
-				x.innerHTML = "Analysis for " + data.date + " is invalid.";
-				_setGaugesToZero();
-				_clearLineGraph('heartlinegraph');
-				_clearLineGraph('sleepstagegraph');
-				return;
-			} else {
-				var x = document.getElementById("datetext");
-				x.innerHTML = "Analysis for " + data.date + ".";
-			}
-			sleepData.total = data.time_sleeping;
-			sleepData.deep = data.time_deep_sleep;
-			sleepData.timeinbed = data.time_in_bed;
-			sleepData.efficiency = Math.round(data.sleep_efficiency * 100) / 100;
-			sleepData.heartrate = Math.round(data.resting_heartrate * 100) / 100;
-			sleepData.stages = data.sleep_stages;
-			sleepData.date = new Date(data.date);
-			sleepData.localstarttime = new Date(data.local_start_time); // - 2*60*60*1000);
-			sleepData.localendtime = new Date(data.local_end_time); // - 2*60*60*1000);
-
-	    setGaugeValue(_gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
-			setGaugeValue(_gauges[1], Math.max(sleepData.totalgoal, sleepData.total), sleepData.total);
- 		  setGaugeValue(_gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
- 		  setGaugeValue(_gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
- 		  setGaugeValue(_gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
-
-			sleepData.heartratedata = [];
-			for(var i = 0; i < data.averaged_heart_rate_curve.length; i++) {
-				if(data.averaged_heart_rate_curve[i][1] != null) {
-					sleepData.heartratedata.push(
-						{
-							'time'  : data.averaged_heart_rate_curve[i][0],
-							'value' : data.averaged_heart_rate_curve[i][1] 
-						}
-					);
-				}
-				else {
-					sleepData.heartratedata.push(
-						{
-							'time'  : data.averaged_heart_rate_curve[i][0],
-							'value' : data.resting_heartrate
-						}
-					);
-				}	
-			}
-
-			sleepData.noisedata = [];
-			for(var i = 0; i < data.noise_measurements.length; i++) {
-				sleepData.noisedata.push(parseInt(data.noise_measurements[i][1]));
-			}
- 	    setGaugeValue(_gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
-
-			sleepData.lightdata = [];
-			for(var i = 0; i < data.luminosity_measurements.length; i++) {
-				sleepData.lightdata.push(parseInt(data.luminosity_measurements[i][1]));
-			}
-			
-			_drawGraphs();
-			drawStages('sleepstagegraph', sleepData.stages);
-		}
-	};
-
-	drawStages = function(canvasid, data) {
+var graphUI = (function(graphUI) {
+	_drawStages = function(canvasid, data) {
     var starttime = new Date(sleepData.localstarttime.getTime()); // Start time today
     var endtime = new Date(sleepData.localendtime.getTime()); // End time tomorrow
 
@@ -229,18 +160,19 @@ var wellnessAPI =(function(wellnessAPI) {
 	_drawGraphs = function(graphname) {
 		_clearLineGraph('heartlinegraph');
 		if($( "#checkbox-noise").is(':checked')) {
-			drawBar('heartlinegraph', sleepData.noisedata, 'rgba(0,255,0,0.4)', 'right', 'Noise', 140);
+			_drawBarGraph('heartlinegraph', sleepData.noisedata, 'rgba(0,255,0,0.4)', 'right', 'Noise', 140);
 		}
 		if($( "#checkbox-luminosity").is(':checked')) {
-			drawBar('heartlinegraph', sleepData.lightdata, 'rgba(0,0,255,0.4)', 'right', 'Luminosity', 220);
+			_drawBarGraph('heartlinegraph', sleepData.lightdata, 'rgba(0,0,255,0.4)', 'right', 'Luminosity', 220);
 		}
 		if($( "#checkbox-heartrate").is(':checked')) {
-			initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
+			_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
 		}
-		initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
+		_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
+    _drawStages('sleepstagegraph', sleepData.stages);
 	};
 
-	drawBar = function(canvasid, data, color, yaxispos, key, keyxpos) {
+	_drawBarGraph = function(canvasid, data, color, yaxispos, key, keyxpos) {
 		var tooltips = [];
 		for(var i = 0; i < data.length; i++) { tooltips.push(data[i] + ''); }
 		var bar = new RGraph.Bar(canvasid, data);
@@ -263,7 +195,7 @@ var wellnessAPI =(function(wellnessAPI) {
 //		RGraph.RedrawCanvas(bar.canvas);
 	};
 
-	initLineGraph = function(canvasid, title, data) {
+	_initLineGraph = function(canvasid, title, data) {
 		var labelarray = [];
 		var starttime = new Date(); // Start time today
 		starttime.setHours(userData.data.night_start_time.split(':')[0]);
@@ -286,7 +218,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 //		console.log(labelarray, labelarray.length);
 
-		var mappedData = mapData(data, starttime, endtime);
+		var mappedData = _mapData(data, starttime, endtime);
 		var tooltips = [];
 		for(var i = 0; i < mappedData.length; i++) { tooltips.push(mappedData[i] + ''); }
 		var canvas  = document.getElementById(canvasid)
@@ -311,7 +243,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		_graphs.push(line);
 	};
 
-	mapData = function(data, starttime, endtime) {
+	_mapData = function(data, starttime, endtime) {
 		// data should have data.time and data.value
 		var result = [];
 		var temptime = new Date(starttime.getTime());
@@ -344,7 +276,15 @@ var wellnessAPI =(function(wellnessAPI) {
 		return result;
 	};
 
-	setGaugeValue = function(gauge, maxvalue, value) {
+	return {
+		clearLineGraph: _clearLineGraph,
+    drawGraphs: _drawGraphs
+	}
+}());
+
+
+var gaugeUI = (function(graphUI) {
+	_setGaugeValue = function(gauge, maxvalue, value) {
 		gauge.refresh(value);
 		if(gauge.convert === true)
 			gauge.txtTitle[0].textContent = secondsToString(value) + gauge.unittxt;
@@ -353,30 +293,24 @@ var wellnessAPI =(function(wellnessAPI) {
 		console.log(value, gauge.txtTitle[0].textContent);
 	};
 
-	// for gauge.js
-	setGaugeValue2 = function(gauge, maxvalue, value) {
-		gauge.set(value); 					// set actual value		
-		gauge.maxValue = maxvalue; 	// set max gauge value
-	};
-
 	var _gauges = [];
 	_initGauges = function() {
-		_gauges.push(initGauge('deepsleep', 'deepsleeptext', 'good', Math.max(sleepData.deepgoal, sleepData.deep) + 600, sleepData.deep, true, ''));
-		_gauges.push(initGauge('totalsleep', 'totalsleeptext', 'good', Math.max(sleepData.totalgoal, sleepData.total) + 600, sleepData.total, true, ''));
-		_gauges.push(initGauge('efficiency', 'efficiencytext', 'good', Math.max(100, sleepData.efficiency), sleepData.efficiency, false, ' %'));
-		_gauges.push(initGauge('timeawake', 'timeawaketext', 'bad', Math.max(5100, sleepData.timeawake()) + 600, sleepData.timeawake(), true, ''));
-		_gauges.push(initGauge('heartrate', 'heartratetext', 'neutral', Math.max(sleepData.heartrate, 80), sleepData.heartrate, false, ' BPM'));
-		_gauges.push(initGauge('noise', 'noisetext', 'bad', Math.max(sleepData.noise(), 120), sleepData.noise(), false, ' db'));
+		_gauges.push(_initGauge('deepsleep', 'deepsleeptext', 'good', Math.max(sleepData.deepgoal, sleepData.deep) + 600, sleepData.deep, true, ''));
+		_gauges.push(_initGauge('totalsleep', 'totalsleeptext', 'good', Math.max(sleepData.totalgoal, sleepData.total) + 600, sleepData.total, true, ''));
+		_gauges.push(_initGauge('efficiency', 'efficiencytext', 'good', Math.max(100, sleepData.efficiency), sleepData.efficiency, false, ' %'));
+		_gauges.push(_initGauge('timeawake', 'timeawaketext', 'bad', Math.max(5100, sleepData.timeawake()) + 600, sleepData.timeawake(), true, ''));
+		_gauges.push(_initGauge('heartrate', 'heartratetext', 'neutral', Math.max(sleepData.heartrate, 80), sleepData.heartrate, false, ' BPM'));
+		_gauges.push(_initGauge('noise', 'noisetext', 'bad', Math.max(sleepData.noise(), 120), sleepData.noise(), false, ' db'));
 	};
 
 	_setGaugesToZero = function() {
 		for(var i = 0; i < _gauges.length; i++) {
-			setGaugeValue(_gauges[i], _gauges[i].maxvalue, 0);
+			_setGaugeValue(_gauges[i], _gauges[i].maxvalue, 0);
 		}
 	};
 
 	// For justGage
-	initGauge = function(canvas, textfield, type, maxvalue, gaugevalue, gaugeconversion, unittxt) {
+	_initGauge = function(canvas, textfield, type, maxvalue, gaugevalue, gaugeconversion, unittxt) {
     var colorset = {
       good: ['#B40404', '#DF3A01',  '#C8FE2E', '#31B404' ],
       neutral: ['#00BFFF', '#0174DF', '#0431B4', '#08088A'],
@@ -416,8 +350,347 @@ var wellnessAPI =(function(wellnessAPI) {
 		return g;
 	};
 
+	return {
+		initGauges: _initGauges,
+		gauges: _gauges,
+		setGaugeValue: _setGaugeValue
+	}
+}());
+
+var wellnessAPI =(function(wellnessAPI) {
+	var baseurl = 'https://wellness.cs.tut.fi/';
+
+	_sleepCB = function(data) {
+		var json = $.parseJSON(data);
+		for(var i = 0; i < json.data.length; i++) {
+			var data = json.data[i];
+			if(data.analysis_valid == false) {
+				var x = document.getElementById("datetext");
+				x.innerHTML = "Analysis for " + data.date + " is invalid.";
+				_setGaugesToZero();
+				graphUI.clearLineGraph('heartlinegraph');
+				graphUI.clearLineGraph('sleepstagegraph');
+				return;
+			} else {
+				var x = document.getElementById("datetext");
+				x.innerHTML = "Analysis for " + data.date + ".";
+			}
+			sleepData.total = data.time_sleeping;
+			sleepData.deep = data.time_deep_sleep;
+			sleepData.timeinbed = data.time_in_bed;
+			sleepData.efficiency = Math.round(data.sleep_efficiency * 100) / 100;
+			sleepData.heartrate = Math.round(data.resting_heartrate * 100) / 100;
+			sleepData.stages = data.sleep_stages;
+			sleepData.date = new Date(data.date);
+			sleepData.localstarttime = new Date(data.local_start_time); // - 2*60*60*1000);
+			sleepData.localendtime = new Date(data.local_end_time); // - 2*60*60*1000);
+
+	    gaugeUI.setGaugeValue(_gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
+			gaugeUI.setGaugeValue(_gauges[1], Math.max(sleepData.totalgoal, sleepData.total), sleepData.total);
+ 		  gaugeUI.setGaugeValue(_gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
+ 		  gaugeUI.setGaugeValue(_gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
+ 		  gaugeUI.setGaugeValue(_gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
+
+			sleepData.heartratedata = [];
+			for(var i = 0; i < data.averaged_heart_rate_curve.length; i++) {
+				if(data.averaged_heart_rate_curve[i][1] != null) {
+					sleepData.heartratedata.push(
+						{
+							'time'  : data.averaged_heart_rate_curve[i][0],
+							'value' : data.averaged_heart_rate_curve[i][1] 
+						}
+					);
+				}
+				else {
+					sleepData.heartratedata.push(
+						{
+							'time'  : data.averaged_heart_rate_curve[i][0],
+							'value' : data.resting_heartrate
+						}
+					);
+				}	
+			}
+
+			sleepData.noisedata = [];
+			for(var i = 0; i < data.noise_measurements.length; i++) {
+				sleepData.noisedata.push(parseInt(data.noise_measurements[i][1]));
+			}
+ 	    gaugeUI.setGaugeValue(_gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
+
+			sleepData.lightdata = [];
+			for(var i = 0; i < data.luminosity_measurements.length; i++) {
+				sleepData.lightdata.push(parseInt(data.luminosity_measurements[i][1]));
+			}
+			
+			graphUI.drawGraphs();
+		}
+	};
+
+	_getData = function(apicall, cb) {
+		var myurl = baseurl + apicall;
+		$.ajax(
+			{
+				url: myurl,
+	    	type: 'GET',
+				datatype: 'json',
+	    	headers: {
+	        "Authorization": userData.credentials
+   			}
+			} 
+		).done(cb);
+	};
+
+	_init = function() {
+		var today = new Date();
+		currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+		var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
+		// _getData('beddit/api/user/slmnn/' + daypath + '/sleep/');
+		_getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/');
+ 	 	resizeCanvas = function (id, height){          
+			canvas = document.getElementById(id);
+			if (canvas.width  < window.innerWidth) {
+				canvas.width  = window.innerWidth - 50;
+			}
+			if(typeof(height) != 'number') {
+				canvas.height = canvas.width / 4;
+			} else {
+				canvas.height = height;
+			}
+		};
+		resizeCanvas('heartlinegraph');
+		resizeCanvas('sleepstagegraph', 40);
+		_initGauges();
+	};
+	
+	return {
+		init: _init,
+		login: function() {
+			var username = $("#username").val();
+			var password = $("#password").val();
+			if(username.length > 0 && username.length < 20 && password.length > 0) {
+				this.getUserData(username, password);
+			}
+		},
+		getUserData: function(username, password) {
+			var apicall = 'beddit/api/user/' + username + '/';
+			var credentials = 'Basic ' + Base64.encode(username + ":" + password);
+			var myurl = baseurl + apicall;
+			$.ajax(
+				{
+					url: myurl,
+		    	type: 'GET',
+					datatype: 'json',
+		    	headers: {
+		        "Authorization": credentials
+    			}
+				} 
+			).done(
+				function(data) {
+					var json = $.parseJSON(data);
+					if(json.status == "ok" && json.code == 200) {
+						userData.data = json.data;
+						userData.username = json.data.username;
+						userData.credentials = credentials;
+						$("#login-msg").text("Hi " + userData.data.first_name + ", login successful.");
+						$("#usertext").text(userData.data.first_name + "'s health dashboard.");
+						$("div.login").hide(1000);
+						$( "#password-dialog" ).popup( "close" );
+						_init();
+					} else {
+						$("#login-msg").text("Sorry, login failed");
+					}
+				}
+			);
+		},
+    getSleepData: function() {
+      var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
+      graphUI.clearLineGraph('heartlinegraph');
+      graphUI.clearLineGraph('sleepstagegraph');
+      _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
+    }
+		getData: _getData
+	}
+}());
+
+var Base64 = {
+  // private property
+  _keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+  // public method for encoding
+  encode : function (input) {
+      var output = "";
+      var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+      var i = 0;
+
+      input = Base64._utf8_encode(input);
+
+      while (i < input.length) {
+
+          chr1 = input.charCodeAt(i++);
+          chr2 = input.charCodeAt(i++);
+          chr3 = input.charCodeAt(i++);
+
+          enc1 = chr1 >> 2;
+          enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+          enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+          enc4 = chr3 & 63;
+
+          if (isNaN(chr2)) {
+              enc3 = enc4 = 64;
+          } else if (isNaN(chr3)) {
+              enc4 = 64;
+          }
+
+          output = output +
+          this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+          this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+
+      }
+
+      return output;
+  },
+
+  // public method for decoding
+  decode : function (input) {
+      var output = "";
+      var chr1, chr2, chr3;
+      var enc1, enc2, enc3, enc4;
+      var i = 0;
+
+      input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+      while (i < input.length) {
+
+          enc1 = this._keyStr.indexOf(input.charAt(i++));
+          enc2 = this._keyStr.indexOf(input.charAt(i++));
+          enc3 = this._keyStr.indexOf(input.charAt(i++));
+          enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+          chr1 = (enc1 << 2) | (enc2 >> 4);
+          chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+          chr3 = ((enc3 & 3) << 6) | enc4;
+
+          output = output + String.fromCharCode(chr1);
+
+          if (enc3 != 64) {
+              output = output + String.fromCharCode(chr2);
+          }
+          if (enc4 != 64) {
+              output = output + String.fromCharCode(chr3);
+          }
+
+      }
+
+      output = Base64._utf8_decode(output);
+
+      return output;
+
+  },
+
+  // private method for UTF-8 encoding
+  _utf8_encode : function (string) {
+      string = string.replace(/\r\n/g,"\n");
+      var utftext = "";
+
+      for (var n = 0; n < string.length; n++) {
+
+          var c = string.charCodeAt(n);
+
+          if (c < 128) {
+              utftext += String.fromCharCode(c);
+          }
+          else if((c > 127) && (c < 2048)) {
+              utftext += String.fromCharCode((c >> 6) | 192);
+              utftext += String.fromCharCode((c & 63) | 128);
+          }
+          else {
+              utftext += String.fromCharCode((c >> 12) | 224);
+              utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+              utftext += String.fromCharCode((c & 63) | 128);
+          }
+
+      }
+
+      return utftext;
+  },
+
+  // private method for UTF-8 decoding
+  _utf8_decode : function (utftext) {
+      var string = "";
+      var i = 0;
+      var c = c1 = c2 = 0;
+
+      while ( i < utftext.length ) {
+
+          c = utftext.charCodeAt(i);
+
+          if (c < 128) {
+              string += String.fromCharCode(c);
+              i++;
+          }
+          else if((c > 191) && (c < 224)) {
+              c2 = utftext.charCodeAt(i+1);
+              string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+              i += 2;
+          }
+          else {
+              c2 = utftext.charCodeAt(i+1);
+              c3 = utftext.charCodeAt(i+2);
+              string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+              i += 3;
+          }
+
+      }
+
+      return string;
+  }
+}
+
+
+secondsToString = function(sec) {
+  var hr, min;
+  sec = Math.floor(sec);
+  hr = Math.floor(sec / 3600);
+  min = Math.floor((sec - (hr * 3600)) / 60);
+  sec -= (hr * 3600) + (min * 60);
+  sec += '';
+  min += '';
+  while (min.length < 2) {
+    min = '0' + min;
+  }
+  while (sec.length < 2) {
+    sec = '0' + sec;
+  }
+  hr = hr ? hr + ':' : '';
+  return hr + min + ':' + sec;
+};
+  
+// Gauge UI with gauge.js
+var gaugeUI_gauge-js = (function(graphUI) {
+	// for gauge.js
+	setGaugeValue = function(gauge, maxvalue, value) {
+		gauge.set(value); 					// set actual value		
+		gauge.maxValue = maxvalue; 	// set max gauge value
+	};
+
+	var _gauges = [];
+	_initGauges = function() {
+		_gauges.push(initGauge('deepsleep', 'deepsleeptext', 'good', Math.max(sleepData.deepgoal, sleepData.deep) + 600, sleepData.deep, true, ''));
+		_gauges.push(initGauge('totalsleep', 'totalsleeptext', 'good', Math.max(sleepData.totalgoal, sleepData.total) + 600, sleepData.total, true, ''));
+		_gauges.push(initGauge('efficiency', 'efficiencytext', 'good', Math.max(100, sleepData.efficiency), sleepData.efficiency, false, ' %'));
+		_gauges.push(initGauge('timeawake', 'timeawaketext', 'bad', Math.max(5100, sleepData.timeawake()) + 600, sleepData.timeawake(), true, ''));
+		_gauges.push(initGauge('heartrate', 'heartratetext', 'neutral', Math.max(sleepData.heartrate, 80), sleepData.heartrate, false, ' BPM'));
+		_gauges.push(initGauge('noise', 'noisetext', 'bad', Math.max(sleepData.noise(), 120), sleepData.noise(), false, ' db'));
+	};
+
+	_setGaugesToZero = function() {
+		for(var i = 0; i < _gauges.length; i++) {
+			setGaugeValue(_gauges[i], _gauges[i].maxvalue, 0);
+		}
+	};
+
 	// For gauge.js
-	initGauge2 = function(canvas, textfield, type, maxvalue, value) {
+	initGauge = function(canvas, textfield, type, maxvalue, value) {
 		var colors = {
 			good: ['#FF0000', '#00FF00' ],
 			neutral: ['#66FFFF','#2B87FF'],
@@ -470,248 +743,8 @@ var wellnessAPI =(function(wellnessAPI) {
 		gauge.set(value); // set actual value
 		return gauge;
 	};
-
-	_getData = function(apicall, cb) {
-		var myurl = baseurl + apicall;
-		$.ajax(
-			{
-				url: myurl,
-	    	type: 'GET',
-				datatype: 'json',
-	    	headers: {
-	        "Authorization": userData.credentials
-   			}
-			} 
-		).done(cb);
-	};
-
-	_init = function() {
-		var today = new Date();
-		currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
-		var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
-		// _getData('beddit/api/user/slmnn/' + daypath + '/sleep/');
-		_getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/');
- 	 	resizeCanvas = function (id, height){          
-			canvas = document.getElementById(id);
-			if (canvas.width  < window.innerWidth) {
-				canvas.width  = window.innerWidth - 50;
-			}
-			if(typeof(height) != 'number') {
-				canvas.height = canvas.width / 4;
-			} else {
-				canvas.height = height;
-			}
-		};
-		resizeCanvas('heartlinegraph');
-		resizeCanvas('sleepstagegraph', 40);
-		_initGauges();
-	};
-	
 	return {
-		clearLineGraph: _clearLineGraph,
 		initGauges: _initGauges,
-		gauges: _gauges,
-		init: _init,
-		login: function() {
-			var username = $("#username").val();
-			var password = $("#password").val();
-			if(username.length > 0 && username.length < 20 && password.length > 0) {
-				this.getUserData(username, password);
-			}
-		},
-		getUserData: function(username, password) {
-			var apicall = 'beddit/api/user/' + username + '/';
-			var credentials = 'Basic ' + Base64.encode(username + ":" + password);
-			var myurl = baseurl + apicall;
-			$.ajax(
-				{
-					url: myurl,
-		    	type: 'GET',
-					datatype: 'json',
-		    	headers: {
-		        "Authorization": credentials
-    			}
-				} 
-			).done(
-				function(data) {
-					var json = $.parseJSON(data);
-					if(json.status == "ok" && json.code == 200) {
-						userData.data = json.data;
-						userData.username = json.data.username;
-						userData.credentials = credentials;
-						$("#login-msg").text("Hi " + userData.data.first_name + ", login successful.");
-						$("#usertext").text(userData.data.first_name + "'s health dashboard.");
-						$("div.login").hide(1000);
-						$( "#password-dialog" ).popup( "close" );
-						_init();
-					} else {
-						$("#login-msg").text("Sorry, login failed");
-					}
-				}
-			);
-		},
-    getSleepData: function() {
-      var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
-      wellnessAPI.clearLineGraph('heartlinegraph');
-      wellnessAPI.clearLineGraph('sleepstagegraph');
-      _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
-    }
-		getData: _getData,
-		drawGraphs: _drawGraphs
+		gauges: _gauges
 	}
 }());
-
-var Base64 = {
-
-// private property
-_keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-
-// public method for encoding
-encode : function (input) {
-    var output = "";
-    var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
-    var i = 0;
-
-    input = Base64._utf8_encode(input);
-
-    while (i < input.length) {
-
-        chr1 = input.charCodeAt(i++);
-        chr2 = input.charCodeAt(i++);
-        chr3 = input.charCodeAt(i++);
-
-        enc1 = chr1 >> 2;
-        enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-        enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-        enc4 = chr3 & 63;
-
-        if (isNaN(chr2)) {
-            enc3 = enc4 = 64;
-        } else if (isNaN(chr3)) {
-            enc4 = 64;
-        }
-
-        output = output +
-        this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
-        this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
-
-    }
-
-    return output;
-},
-
-// public method for decoding
-decode : function (input) {
-    var output = "";
-    var chr1, chr2, chr3;
-    var enc1, enc2, enc3, enc4;
-    var i = 0;
-
-    input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-
-    while (i < input.length) {
-
-        enc1 = this._keyStr.indexOf(input.charAt(i++));
-        enc2 = this._keyStr.indexOf(input.charAt(i++));
-        enc3 = this._keyStr.indexOf(input.charAt(i++));
-        enc4 = this._keyStr.indexOf(input.charAt(i++));
-
-        chr1 = (enc1 << 2) | (enc2 >> 4);
-        chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-        chr3 = ((enc3 & 3) << 6) | enc4;
-
-        output = output + String.fromCharCode(chr1);
-
-        if (enc3 != 64) {
-            output = output + String.fromCharCode(chr2);
-        }
-        if (enc4 != 64) {
-            output = output + String.fromCharCode(chr3);
-        }
-
-    }
-
-    output = Base64._utf8_decode(output);
-
-    return output;
-
-},
-
-// private method for UTF-8 encoding
-_utf8_encode : function (string) {
-    string = string.replace(/\r\n/g,"\n");
-    var utftext = "";
-
-    for (var n = 0; n < string.length; n++) {
-
-        var c = string.charCodeAt(n);
-
-        if (c < 128) {
-            utftext += String.fromCharCode(c);
-        }
-        else if((c > 127) && (c < 2048)) {
-            utftext += String.fromCharCode((c >> 6) | 192);
-            utftext += String.fromCharCode((c & 63) | 128);
-        }
-        else {
-            utftext += String.fromCharCode((c >> 12) | 224);
-            utftext += String.fromCharCode(((c >> 6) & 63) | 128);
-            utftext += String.fromCharCode((c & 63) | 128);
-        }
-
-    }
-
-    return utftext;
-},
-
-// private method for UTF-8 decoding
-_utf8_decode : function (utftext) {
-    var string = "";
-    var i = 0;
-    var c = c1 = c2 = 0;
-
-    while ( i < utftext.length ) {
-
-        c = utftext.charCodeAt(i);
-
-        if (c < 128) {
-            string += String.fromCharCode(c);
-            i++;
-        }
-        else if((c > 191) && (c < 224)) {
-            c2 = utftext.charCodeAt(i+1);
-            string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-            i += 2;
-        }
-        else {
-            c2 = utftext.charCodeAt(i+1);
-            c3 = utftext.charCodeAt(i+2);
-            string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
-            i += 3;
-        }
-
-    }
-
-    return string;
-}
-
-}
-
-
-  secondsToString = function(sec) {
-    var hr, min;
-		sec = Math.floor(sec);
-    hr = Math.floor(sec / 3600);
-    min = Math.floor((sec - (hr * 3600)) / 60);
-    sec -= (hr * 3600) + (min * 60);
-    sec += '';
-    min += '';
-    while (min.length < 2) {
-      min = '0' + min;
-    }
-    while (sec.length < 2) {
-      sec = '0' + sec;
-    }
-    hr = hr ? hr + ':' : '';
-    return hr + min + ':' + sec;
-  };
