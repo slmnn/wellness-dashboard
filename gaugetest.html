@@ -1,0 +1,29 @@
+<html>
+<head>
+    <script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/justgage.1.0.1.min.js"></script>
+    <script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/raphael.2.1.0.min.js"></script>
+</head>
+<body onload="init();">
+	<script type="text/javascript">
+  // For justGage
+  initGauge = function(canvas, textfield, type, maxvalue, gaugevalue, gaugetitle) {
+    var g = new JustGage({
+      id: canvas,
+      value: gaugevalue,
+      min: 0,
+      max: maxvalue,
+      showMinMax: false,
+      startAnimationType: "bounce",
+      refreshAnimationType: "bounce",
+      title: gaugetitle
+    });
+    return g;
+  };
+	var gauge = undefined;
+	init = function() {
+		gauge = initGauge("foo", "bar", "good", 100, 66, "moro");
+	}
+	</script>
+	<div id="foo" style="width:200px; height:160px;"></canvas>
+</body>
+</html>

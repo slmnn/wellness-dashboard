@@ -1,0 +1,131 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Wellness Dashboard</title>
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+<!--		<script type="text/javascript" src="./lib/gauge.js"></script> -->
+		<script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/justgage.1.0.1.js"></script>		
+		<script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/raphael.2.1.0.min.js"></script>		
+		<script src="./lib/RGraph/libraries/RGraph.common.core.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.common.dynamic.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.common.tooltips.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.common.effects.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.common.key.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.line.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.hprogress.js" ></script>
+		<script src="./lib/RGraph/libraries/RGraph.bar.js" ></script>
+		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+-		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+		<script type="text/javascript" src="./app.js"></script>
+	</head>
+	<body>
+		<script type="text/javascript">
+			$( "#button-prev" ).live("click", function(){
+				prevDay();
+			});
+			$( "#button-next" ).live("click", function(){
+				nextDay();
+			});
+			$( "#checkbox-heartrate" ).live( "change", function(event, ui) {
+				wellnessAPI.drawGraphs();
+			});
+			$( "#checkbox-noise" ).live( "change", function(event, ui) {
+				wellnessAPI.drawGraphs();
+			});
+			$( "#checkbox-luminosity" ).live( "change", function(event, ui) {
+				wellnessAPI.drawGraphs();
+			});
+			setTimeout('$( "#password-dialog" ).popup( "open" )', 1000);
+		</script>
+		<div data-role="page"> 
+			<div data-role="header">
+				<a href="#" data-icon="arrow-l" id="button-prev">Prev Day</a>
+				<h1>Wellness Dashboard</h1>
+				<a href="#" data-icon="arrow-r" id="button-next">Next Day</a>
+			</div>		
+			<div data-role="content">
+				<p>
+						<span id="usertext"></span>
+						<span id="datetext"></span>
+				</p>
+					<div class="biggauge">
+						<span class="biggaugetext">Deep sleep</span>
+						<div id="deepsleep" style="width: 200; height: 160"></div>
+					</div>
+					<div class="gauge">		
+						<span class="gaugetext">Total sleep</span>
+						<div id="totalsleep"></div>
+					</div>
+					<div class="gauge">		
+						<span class="gaugetext">Time awake</span>
+						<div id="timeawake"></div>
+					</div>
+					<div class="gauge">				
+						<span class="gaugetext">Sleep efficiency</span>
+						<div id="efficiency"></div>
+					</div>
+					<div class="gauge">		
+						<span class="gaugetext">Heart rate</span>
+						<div id="heartrate"></div>
+					</div>
+					<div class="gauge">		
+						<span class="gaugetext">Noise</span>
+						<div id="noise"></div>
+					</div>
+				<div class="linegraph">
+					<div class="graphtext">Detailed sleep data</div>
+					<div class="graphselect">
+<!--
+						<fieldset data-type="horizontal">
+							<label for="flip-noise">Noise:</label>
+							<select name="flip-noise" id="flip-noise" data-role="slider" data-mini="true">
+								<option value="off">Off</option>
+								<option value="on">On</option>
+							</select>
+							<label for="flip-luminosity">Luminosity:</label>
+							<select name="flip-luminosity" id="flip-luminosity" data-role="slider" data-mini="true">
+								<option value="off">Off</option>
+								<option value="on">On</option>
+							</select>
+						</fieldset>
+-->
+						<fieldset data-role="controlgroup" data-type="horizontal">
+							<input type="checkbox" checked="true" name="checkbox-noise" id="checkbox-noise" class="custom" data-mini="true" />
+							<label for="checkbox-noise">Noise</label>
+							<input type="checkbox" checked="true" name="checkbox-luminosity" id="checkbox-luminosity" class="custom" data-mini="true" />
+							<label for="checkbox-luminosity">Luminosity</label>    
+						</fieldset>
+					</div>
+					<canvas id="sleepstagegraph"></canvas>
+					<canvas id="heartlinegraph"></canvas>
+				</div>
+
+		<div data-role="popup" id="password-dialog">
+			<div data-role="content">
+				<p><span id="login-msg">Enter your credentials.</span></p>
+				<form action="javascript:void(0);">
+					<fieldset>
+						<div data-role="fieldcontain">
+		 	       	<input type="text" size="15" placeholder="username" name="username" id="username" />
+						</div>
+						<div data-role="fieldcontain">
+		 	       	<input type="password" size="15" placeholder="password" name="password" id="password"  autocomplete="off" />
+						</div>
+ 		       	<button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
+					</fieldset>
+				</form>
+			</div>
+		</div>
+
+<!--			
+			<div data-role="footer">
+				<p>Developed by Lively research group</p>
+			</div>
+-->
+
+		</div> 
+
+	</body>
+</html>
