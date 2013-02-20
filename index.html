@@ -29,13 +29,13 @@
 				nextDay();
 			});
 			$( "#checkbox-heartrate" ).live( "change", function(event, ui) {
-				wellnessAPI.drawGraphs();
+				graphUI.drawGraphs();
 			});
 			$( "#checkbox-noise" ).live( "change", function(event, ui) {
-				wellnessAPI.drawGraphs();
+				graphUI.drawGraphs();
 			});
 			$( "#checkbox-luminosity" ).live( "change", function(event, ui) {
-				wellnessAPI.drawGraphs();
+				graphUI.drawGraphs();
 			});
 			setTimeout('$( "#password-dialog" ).popup( "open" )', 1000);
 		</script>

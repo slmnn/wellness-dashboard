@@ -385,11 +385,11 @@ var wellnessAPI =(function(wellnessAPI) {
 			sleepData.localstarttime = new Date(data.local_start_time); // - 2*60*60*1000);
 			sleepData.localendtime = new Date(data.local_end_time); // - 2*60*60*1000);
 
-	    gaugeUI.setGaugeValue(_gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
-			gaugeUI.setGaugeValue(_gauges[1], Math.max(sleepData.totalgoal, sleepData.total), sleepData.total);
- 		  gaugeUI.setGaugeValue(_gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
- 		  gaugeUI.setGaugeValue(_gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
- 		  gaugeUI.setGaugeValue(_gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
+	    gaugeUI.setGaugeValue(gaugeUI.gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
+			gaugeUI.setGaugeValue(gaugeUI.gauges[1], Math.max(sleepData.totalgoal, sleepData.total), sleepData.total);
+ 		  gaugeUI.setGaugeValue(gaugeUI.gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
+ 		  gaugeUI.setGaugeValue(gaugeUI.gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
+ 		  gaugeUI.setGaugeValue(gaugeUI.gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
 
 			sleepData.heartratedata = [];
 			for(var i = 0; i < data.averaged_heart_rate_curve.length; i++) {
@@ -415,7 +415,7 @@ var wellnessAPI =(function(wellnessAPI) {
 			for(var i = 0; i < data.noise_measurements.length; i++) {
 				sleepData.noisedata.push(parseInt(data.noise_measurements[i][1]));
 			}
- 	    gaugeUI.setGaugeValue(_gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
+ 	    gaugeUI.setGaugeValue(gaugeUI.gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
 
 			sleepData.lightdata = [];
 			for(var i = 0; i < data.luminosity_measurements.length; i++) {
@@ -464,7 +464,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		};
 		resizeCanvas('heartlinegraph');
 		resizeCanvas('sleepstagegraph', 40);
-		_initGauges();
+		gaugeUI.initGauges();
 	};
 	
 	return {
@@ -666,7 +666,7 @@ secondsToString = function(sec) {
 };
   
 // Gauge UI with gauge.js
-var gaugeUI_gauge-js = (function(graphUI) {
+var gaugeUI_gauge_js = (function(graphUI) {
 	// for gauge.js
 	setGaugeValue = function(gauge, maxvalue, value) {
 		gauge.set(value); 					// set actual value		
