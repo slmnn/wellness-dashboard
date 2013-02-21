@@ -23,10 +23,10 @@
 	<body>
 		<script type="text/javascript">
 			$( "#button-prev" ).live("click", function(){
-				prevDay();
+				wellnessAPI.prevDay();
 			});
 			$( "#button-next" ).live("click", function(){
-				nextDay();
+				wellnessAPI.nextDay();
 			});
 			$( "#checkbox-heartrate" ).live( "change", function(event, ui) {
 				graphUI.drawGraphs();

@@ -1,16 +1,3 @@
-var currentday;
-
-function prevDay() {
-	currentday = new Date(currentday.getTime() - (24 * 60 * 60 * 1000));
-  wellnessAPI.getSleepData();
-};
-
-function nextDay() {
-	currentday = new Date(currentday.getTime() + (24 * 60 * 60 * 1000));
-  wellnessAPI.getSleepData();
-//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
-};
-
 var userData = (function(userData) {
 	var _data = undefined;
 	var _credentials = undefined;
@@ -21,6 +8,16 @@ var userData = (function(userData) {
 		credentials: _credentials
 	}
 }());
+
+var actvityData = (function(activityData) {
+	var _activity = [];
+
+	return {
+		activity: _activity
+	}
+
+}());
+
 
 var weightData = (function(weightData) {
 	var _weight = 0;
@@ -426,6 +423,10 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 	};
 
+	_weightCB = function() {
+		
+	};
+
 	_getData = function(apicall, cb) {
 		var myurl = baseurl + apicall;
 		$.ajax(
@@ -440,8 +441,12 @@ var wellnessAPI =(function(wellnessAPI) {
 		).done(cb);
 	};
 	
+	_getWeightData = function() {
+    _getData('analysis/api/user/' + userData.username +  '/weight/', _weightCB);
+	};
+
 	_getSleepData =	function() {
-    var daypath = currentday.getFullYear() + '/' + (currentday.getMonth() + 1) + '/' + (currentday.getDate());
+    var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
     graphUI.clearLineGraph('heartlinegraph');
     graphUI.clearLineGraph('sleepstagegraph');
     _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
@@ -449,7 +454,7 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_init = function() {
 		var today = new Date();
-		currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+		_currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
 		_getSleepData();
  	 	resizeCanvas = function (id, height){          
 			canvas = document.getElementById(id);
@@ -466,7 +471,20 @@ var wellnessAPI =(function(wellnessAPI) {
 		resizeCanvas('sleepstagegraph', 40);
 		gaugeUI.initGauges();
 	};
-	
+
+	var _currentday;
+
+	_prevDay = function() {
+		_currentday = new Date(_currentday.getTime() - (24 * 60 * 60 * 1000));
+  	_getSleepData();
+	};
+
+	_nextDay = function() {
+		_currentday = new Date(_currentday.getTime() + (24 * 60 * 60 * 1000));
+  	_getSleepData();
+		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
+	};
+
 	return {
 		init: _init,
 		login: function() {
@@ -508,7 +526,9 @@ var wellnessAPI =(function(wellnessAPI) {
 			);
 		},
     getSleepData: _getSleepData,
-		getData: _getData
+		getData: _getData,
+		nextDay: _nextDay,
+		prevDay: _prevDay
 	}
 }());
 
