@@ -547,8 +547,9 @@ var wellnessAPI =(function(wellnessAPI) {
             userData.services = json.services_linked;
             userData.beddit = json.services_linked.indexOf('beddit');
             userData.withings = json.services_linked.indexOf('withings');
-						$("#servicestext").text(" (" + userData.services.toString() + "). ");
+						$("#servicestext").text(" (" + userData.services.toString() + ") ");
 						_init();
+					}
 				}
 			);
 		},
