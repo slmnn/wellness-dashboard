@@ -2,14 +2,20 @@ var userData = (function(userData) {
 	var _data = undefined;
 	var _credentials = undefined;
 	var _username = undefined;
+  var _services = [];
+	var _beddit = false;
+	var _withings = false;
 	return {
 		username: _username,
 		data: _data,
-		credentials: _credentials
+		credentials: _credentials,
+		services: _services,
+		beddit: _beddit,
+		withings: _withings
 	}
 }());
 
-var actvityData = (function(activityData) {
+var activityData = (function(activityData) {
 	var _activity = [];
 
 	return {
@@ -133,17 +139,17 @@ var graphUI = (function(graphUI) {
 		}
 		var progress1 = new RGraph.HProgress(canvasid, parsedData, 100);
 		progress1.Set('colors', colors);
-    progress1.Set('tooltips', tooltips);
+		progress1.Set('tooltips', tooltips);
 		progress1.Set('chart.tickmarks', false);
 		progress1.Set('chart.gutter.top', 20);
 		progress1.Set('chart.gutter.bottom', 0);
-    progress1.Set('units.post', '');
+		progress1.Set('units.post', '');
 		progress1.Set('chart.text.color', 'rgba(255, 147, 0, 0)') // invisible text
 		progress1.Set('key', ['Away', 'Wake', 'Light sleep', 'REM', 'Deep sleep']);
 		progress1.Set('key.colors', ['rgba(44, 44, 44, 0.4)', 'rgba(255, 0, 0, 0.6)', 'rgba(0, 196, 255, 0.6)', 'rgba(0, 196, 36, 0.6)', 'rgba(0, 63, 255, 0.6)']);
-//    progress1.Set('tickmarks.zerostart', true);
-//    progress1.Set('bevel', true);        
-    progress1.Draw();
+		//    progress1.Set('tickmarks.zerostart', true);
+		//    progress1.Set('bevel', true);        
+		progress1.Draw();
 	}
 
 	_clearLineGraph = function(canvasid) {
@@ -166,7 +172,7 @@ var graphUI = (function(graphUI) {
 			_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
 		}
 		_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
-    _drawStages('sleepstagegraph', sleepData.stages);
+		_drawStages('sleepstagegraph', sleepData.stages);
 	};
 
 	_drawBarGraph = function(canvasid, data, color, yaxispos, key, keyxpos) {
@@ -175,17 +181,17 @@ var graphUI = (function(graphUI) {
 		var bar = new RGraph.Bar(canvasid, data);
 		bar.Set('tooltips',tooltips);
 		bar.Set('colors', [color]);
-    bar.Set('hmargin', 0);
+		bar.Set('hmargin', 0);
 		bar.Set('background.grid', false);
 		bar.Set('chart.yaxispos', yaxispos);
 		bar.Set('chart.ylabels.count', 3);
 		bar.Set('chart.scale.decimals', 0);
 		bar.Set('ylabels', false);
-    bar.Set('chart.noaxes', false);
-    bar.Set('chart.key', [key]);
-    bar.Set('chart.key.position.x', keyxpos);
-    bar.Set('chart.key.position', 'gutter');
-	  bar.Set('chart.ymin', Math.max(0, Math.min.apply(null, data)));
+		bar.Set('chart.noaxes', false);
+		bar.Set('chart.key', [key]);
+		bar.Set('chart.key.position.x', keyxpos);
+		bar.Set('chart.key.position', 'gutter');
+		bar.Set('chart.ymin', Math.max(0, Math.min.apply(null, data)));
 		bar.Set('chart.filled.accumulative', true);
 		bar.Draw();
 		_graphs.push(bar);
@@ -275,7 +281,7 @@ var graphUI = (function(graphUI) {
 
 	return {
 		clearLineGraph: _clearLineGraph,
-    drawGraphs: _drawGraphs
+		drawGraphs: _drawGraphs
 	}
 }());
 
@@ -382,11 +388,11 @@ var wellnessAPI =(function(wellnessAPI) {
 			sleepData.localstarttime = new Date(data.local_start_time); // - 2*60*60*1000);
 			sleepData.localendtime = new Date(data.local_end_time); // - 2*60*60*1000);
 
-	    gaugeUI.setGaugeValue(gaugeUI.gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
+			gaugeUI.setGaugeValue(gaugeUI.gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
 			gaugeUI.setGaugeValue(gaugeUI.gauges[1], Math.max(sleepData.totalgoal, sleepData.total), sleepData.total);
- 		  gaugeUI.setGaugeValue(gaugeUI.gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
- 		  gaugeUI.setGaugeValue(gaugeUI.gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
- 		  gaugeUI.setGaugeValue(gaugeUI.gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
+			gaugeUI.setGaugeValue(gaugeUI.gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
+			gaugeUI.setGaugeValue(gaugeUI.gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
+			gaugeUI.setGaugeValue(gaugeUI.gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
 
 			sleepData.heartratedata = [];
 			for(var i = 0; i < data.averaged_heart_rate_curve.length; i++) {
@@ -412,7 +418,7 @@ var wellnessAPI =(function(wellnessAPI) {
 			for(var i = 0; i < data.noise_measurements.length; i++) {
 				sleepData.noisedata.push(parseInt(data.noise_measurements[i][1]));
 			}
- 	    gaugeUI.setGaugeValue(gaugeUI.gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
+			gaugeUI.setGaugeValue(gaugeUI.gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
 
 			sleepData.lightdata = [];
 			for(var i = 0; i < data.luminosity_measurements.length; i++) {
@@ -442,15 +448,15 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 	
 	_getWeightData = function() {
-    _getData('analysis/api/user/' + userData.username +  '/weight/', _weightCB);
+		_getData('analysis/api/user/' + userData.username +  '/weight/', _weightCB);
 	};
 
 	_getSleepData =	function() {
-    var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-    graphUI.clearLineGraph('heartlinegraph');
-    graphUI.clearLineGraph('sleepstagegraph');
-    _getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
-  };
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		graphUI.clearLineGraph('heartlinegraph');
+		graphUI.clearLineGraph('sleepstagegraph');
+		_getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
+	};
 
 	_init = function() {
 		var today = new Date();
@@ -476,12 +482,12 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_prevDay = function() {
 		_currentday = new Date(_currentday.getTime() - (24 * 60 * 60 * 1000));
-  	_getSleepData();
+		_getSleepData();
 	};
 
 	_nextDay = function() {
 		_currentday = new Date(_currentday.getTime() + (24 * 60 * 60 * 1000));
-  	_getSleepData();
+		_getSleepData();
 		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 	};
 
@@ -514,18 +520,39 @@ var wellnessAPI =(function(wellnessAPI) {
 						userData.data = json.data;
 						userData.username = json.data.username;
 						userData.credentials = credentials;
-						$("#login-msg").text("Hi " + userData.data.first_name + ", login successful.");
-						$("#usertext").text(userData.data.first_name + "'s health dashboard.");
+						$("#login-msg").text(" Hi " + userData.data.first_name + ", login successful. ");
+						$("#usertext").text(userData.data.first_name + "'s health dashboard. ");
 						$("div.login").hide(1000);
 						$( "#password-dialog" ).popup( "close" );
-						_init();
 					} else {
 						$("#login-msg").text("Sorry, login failed");
 					}
 				}
 			);
+			apicall = 'user/services/';
+			myurl = baseurl + apicall;
+			$.ajax(
+				{
+					url: myurl,
+		    	type: 'GET',
+					datatype: 'json',
+		    	headers: {
+		        "Authorization": credentials
+    			}
+				} 
+			).done(
+				function(data) {
+					var json = $.parseJSON(data);
+					if(json.status == "ok" && json.code == 200) {
+            userData.services = json.services_linked;
+            userData.beddit = json.services_linked.indexOf('beddit');
+            userData.withings = json.services_linked.indexOf('withings');
+						$("#servicestext").text(" (" + userData.services.toString() + "). ");
+						_init();
+				}
+			);
 		},
-    getSleepData: _getSleepData,
+		getSleepData: _getSleepData,
 		getData: _getData,
 		nextDay: _nextDay,
 		prevDay: _prevDay
@@ -533,79 +560,79 @@ var wellnessAPI =(function(wellnessAPI) {
 }());
 
 var Base64 = {
-  // private property
-  _keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+	// private property
+	_keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
 
-  // public method for encoding
-  encode : function (input) {
-      var output = "";
-      var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
-      var i = 0;
+	// public method for encoding
+	encode : function (input) {
+		var output = "";
+		var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+		var i = 0;
 
-      input = Base64._utf8_encode(input);
+		input = Base64._utf8_encode(input);
 
-      while (i < input.length) {
+		while (i < input.length) {
 
-          chr1 = input.charCodeAt(i++);
-          chr2 = input.charCodeAt(i++);
-          chr3 = input.charCodeAt(i++);
+			chr1 = input.charCodeAt(i++);
+			chr2 = input.charCodeAt(i++);
+			chr3 = input.charCodeAt(i++);
 
-          enc1 = chr1 >> 2;
-          enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-          enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-          enc4 = chr3 & 63;
+			enc1 = chr1 >> 2;
+			enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+			enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+			enc4 = chr3 & 63;
 
-          if (isNaN(chr2)) {
-              enc3 = enc4 = 64;
-          } else if (isNaN(chr3)) {
-              enc4 = 64;
-          }
+			if (isNaN(chr2)) {
+			  enc3 = enc4 = 64;
+			} else if (isNaN(chr3)) {
+			  enc4 = 64;
+			}
 
-          output = output +
-          this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
-          this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+			output = output +
+			this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+			this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
 
-      }
+		}
 
-      return output;
-  },
+		return output;
+	},
 
-  // public method for decoding
-  decode : function (input) {
-      var output = "";
-      var chr1, chr2, chr3;
-      var enc1, enc2, enc3, enc4;
-      var i = 0;
+	// public method for decoding
+	decode : function (input) {
+		var output = "";
+		var chr1, chr2, chr3;
+		var enc1, enc2, enc3, enc4;
+		var i = 0;
 
-      input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+		input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
-      while (i < input.length) {
+		while (i < input.length) {
 
-          enc1 = this._keyStr.indexOf(input.charAt(i++));
-          enc2 = this._keyStr.indexOf(input.charAt(i++));
-          enc3 = this._keyStr.indexOf(input.charAt(i++));
-          enc4 = this._keyStr.indexOf(input.charAt(i++));
+			enc1 = this._keyStr.indexOf(input.charAt(i++));
+			enc2 = this._keyStr.indexOf(input.charAt(i++));
+			enc3 = this._keyStr.indexOf(input.charAt(i++));
+			enc4 = this._keyStr.indexOf(input.charAt(i++));
 
-          chr1 = (enc1 << 2) | (enc2 >> 4);
-          chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-          chr3 = ((enc3 & 3) << 6) | enc4;
+			chr1 = (enc1 << 2) | (enc2 >> 4);
+			chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+			chr3 = ((enc3 & 3) << 6) | enc4;
 
-          output = output + String.fromCharCode(chr1);
+			output = output + String.fromCharCode(chr1);
 
-          if (enc3 != 64) {
-              output = output + String.fromCharCode(chr2);
-          }
-          if (enc4 != 64) {
-              output = output + String.fromCharCode(chr3);
-          }
+			if (enc3 != 64) {
+				output = output + String.fromCharCode(chr2);
+			}
+			if (enc4 != 64) {
+				output = output + String.fromCharCode(chr3);
+			}
 
-      }
+		}
 
-      output = Base64._utf8_decode(output);
+		output = Base64._utf8_decode(output);
 
-      return output;
+		return output;
 
-  },
+	},
 
   // private method for UTF-8 encoding
   _utf8_encode : function (string) {
@@ -668,21 +695,21 @@ var Base64 = {
 
 
 secondsToString = function(sec) {
-  var hr, min;
-  sec = Math.floor(sec);
-  hr = Math.floor(sec / 3600);
-  min = Math.floor((sec - (hr * 3600)) / 60);
-  sec -= (hr * 3600) + (min * 60);
-  sec += '';
-  min += '';
-  while (min.length < 2) {
-    min = '0' + min;
-  }
-  while (sec.length < 2) {
-    sec = '0' + sec;
-  }
-  hr = hr ? hr + ':' : '';
-  return hr + min + ':' + sec;
+	var hr, min;
+	sec = Math.floor(sec);
+	hr = Math.floor(sec / 3600);
+	min = Math.floor((sec - (hr * 3600)) / 60);
+	sec -= (hr * 3600) + (min * 60);
+	sec += '';
+	min += '';
+	while (min.length < 2) {
+		min = '0' + min;
+	}
+	while (sec.length < 2) {
+		sec = '0' + sec;
+	}
+	hr = hr ? hr + ':' : '';
+	return hr + min + ':' + sec;
 };
   
 // Gauge UI with gauge.js
