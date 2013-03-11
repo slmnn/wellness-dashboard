@@ -455,7 +455,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		graphUI.clearLineGraph('heartlinegraph');
 		graphUI.clearLineGraph('sleepstagegraph');
-		_getData('analysis/api/user/' + userData.username +  '/sleep/' + daypath + '/days/1/', _sleepCB);
+		_getData('api/unify/sleep/' + daypath + '/days/1/', _sleepCB);
 	};
 
 	_init = function() {
