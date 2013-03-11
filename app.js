@@ -5,21 +5,24 @@ var userData = (function(userData) {
   var _services = [];
 	var _beddit = false;
 	var _withings = false;
+	var _fitbit = false;
 	return {
 		username: _username,
 		data: _data,
 		credentials: _credentials,
 		services: _services,
 		beddit: _beddit,
-		withings: _withings
+		withings: _withings,
+		fitbit: _fitbit
 	}
 }());
 
 var activityData = (function(activityData) {
-	var _activity = [];
-
+	var _goals = { 'caloriesOut': 1000, 'activeScore': 1000 };
+	var _summary = { 'caloriesOut': 0, 'activeScore': 0, 'activityCalories': 0 };
 	return {
-		activity: _activity
+		goals: _goals,
+		summary: _summary
 	}
 
 }());
@@ -296,14 +299,20 @@ var gaugeUI = (function(graphUI) {
 		console.log(value, gauge.txtTitle[0].textContent);
 	};
 
-	var _gauges = [];
-	_initGauges = function() {
+	var _gauges = [];	
+	_initSleepGauges = function() {
 		_gauges.push(_initGauge('deepsleep', 'deepsleeptext', 'good', Math.max(sleepData.deepgoal, sleepData.deep) + 600, sleepData.deep, true, ''));
 		_gauges.push(_initGauge('totalsleep', 'totalsleeptext', 'good', Math.max(sleepData.totalgoal, sleepData.total) + 600, sleepData.total, true, ''));
 		_gauges.push(_initGauge('efficiency', 'efficiencytext', 'good', Math.max(100, sleepData.efficiency), sleepData.efficiency, false, ' %'));
 		_gauges.push(_initGauge('timeawake', 'timeawaketext', 'bad', Math.max(5100, sleepData.timeawake()) + 600, sleepData.timeawake(), true, ''));
 		_gauges.push(_initGauge('heartrate', 'heartratetext', 'neutral', Math.max(sleepData.heartrate, 80), sleepData.heartrate, false, ' BPM'));
 		_gauges.push(_initGauge('noise', 'noisetext', 'bad', Math.max(sleepData.noise(), 120), sleepData.noise(), false, ' db'));
+	};
+
+	var _activityGauges = [];
+	_initActivityGauges = function() {
+		_activityGauges.push(_initGauge('calories', 'null', 'good', activityData.goals.caloriesOut, activityData.summary.activityCalories, false, ''));
+		_activityGauges.push(_initGauge('activityscore', 'null', 'good', activityData.goals.activeScore, activityData.summary.activeScore, false, ''));
 	};
 
 	_setGaugesToZero = function() {
@@ -354,8 +363,10 @@ var gaugeUI = (function(graphUI) {
 	};
 
 	return {
-		initGauges: _initGauges,
+		initSleepGauges: _initSleepGauges,
+		initActivityGauges: _initActivityGauges,
 		gauges: _gauges,
+		activityGauges: _activityGauges,
 		setGaugeValue: _setGaugeValue
 	}
 }());
@@ -429,8 +440,16 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 	};
 
-	_weightCB = function() {
+	_weightCB = function(data) {
 		
+	};
+
+	_fitbitSummaryCB = function(data) {
+		var json = $.parseJSON(data);
+		activityData.goals = json.data.goals;
+		activityData.summary = json.data.summary;
+		gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
+		gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
 	};
 
 	_getData = function(apicall, cb) {
@@ -448,7 +467,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 	
 	_getWeightData = function() {
-		_getData('analysis/api/user/' + userData.username +  '/weight/', _weightCB);
+		_getData('api/unify/measures/' + '2013/03/04/days/1', _weightCB);
 	};
 
 	_getSleepData =	function() {
@@ -458,36 +477,78 @@ var wellnessAPI =(function(wellnessAPI) {
 		_getData('api/unify/sleep/' + daypath + '/days/1/', _sleepCB);
 	};
 
+	_getFitbitSummaryData =	function() {
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		//graphUI.clearLineGraph('activitygraph');
+		_getData('fitbit/api/activities/' + daypath, _fitbitSummaryCB);
+	};
+
 	_init = function() {
 		var today = new Date();
 		_currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
-		_getSleepData();
- 	 	resizeCanvas = function (id, height){          
-			canvas = document.getElementById(id);
-			if (canvas.width  < window.innerWidth) {
-				canvas.width  = window.innerWidth - 50;
-			}
-			if(typeof(height) != 'number') {
-				canvas.height = canvas.width / 4;
-			} else {
-				canvas.height = height;
-			}
-		};
-		resizeCanvas('heartlinegraph');
-		resizeCanvas('sleepstagegraph', 40);
-		gaugeUI.initGauges();
+		if(userData.beddit) {
+			var apicall = 'beddit/api/user/' + userData.username + '/';
+			var myurl = baseurl + apicall;
+			$.ajax(
+				{
+					url: myurl,
+		    	type: 'GET',
+					datatype: 'json',
+		    	headers: {
+		        "Authorization": userData.credentials
+    			}
+				} 
+			).done(
+				function(data) {
+					var json = $.parseJSON(data);
+					if(json.status == "ok" && json.code == 200) {
+						userData.data = json.data;
+						$("#usertext").text(userData.data.first_name + "'s health dashboard. ");
+
+			     	_getSleepData();
+
+					} else {
+						console.log("Beddit user data failed" + apicall);
+					}
+				}
+			);
+     	resizeCanvas('heartlinegraph');
+    	resizeCanvas('sleepstagegraph', 40);
+ 			gaugeUI.initSleepGauges();
+			$("#beddit").css({"visibility":"visible"});
+		}
+		if(userData.fitbit) {
+			gaugeUI.initActivityGauges();
+			_getFitbitSummaryData();
+			$("#fitbit").css({"visibility":"visible"});
+		}
+	};
+
+	_refreshData = function() {
+		if(userData.beddit) {
+     	_getSleepData();
+		}
+
+		if(userData.withings) {
+
+		}
+
+		if(userData.fitbit) {
+			_getFitbitSummaryData();
+		}
+	
 	};
 
 	var _currentday;
 
 	_prevDay = function() {
 		_currentday = new Date(_currentday.getTime() - (24 * 60 * 60 * 1000));
-		_getSleepData();
+		_refreshData();
 	};
 
 	_nextDay = function() {
 		_currentday = new Date(_currentday.getTime() + (24 * 60 * 60 * 1000));
-		_getSleepData();
+		_refreshData();
 		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 	};
 
@@ -501,8 +562,10 @@ var wellnessAPI =(function(wellnessAPI) {
 			}
 		},
 		getUserData: function(username, password) {
-			var apicall = 'beddit/api/user/' + username + '/';
 			var credentials = 'Basic ' + Base64.encode(username + ":" + password);
+
+			// First we check the services available for the user
+			var apicall = 'user/services/';
 			var myurl = baseurl + apicall;
 			$.ajax(
 				{
@@ -517,38 +580,28 @@ var wellnessAPI =(function(wellnessAPI) {
 				function(data) {
 					var json = $.parseJSON(data);
 					if(json.status == "ok" && json.code == 200) {
-						userData.data = json.data;
-						userData.username = json.data.username;
+            userData.services = json.services_linked;
+						if(json.services_linked.indexOf('beddit') != -1) {
+	            userData.beddit = true;
+						} if(json.services_linked.indexOf('withings') != -1) {
+	            userData.withings = true;
+						} if(json.services_linked.indexOf('fitbit') != -1) {
+	            userData.fitbit = true;
+						}
+						$("#servicestext").text(" (" + userData.services.toString() + ") ");
+						
+						// Login successfull
+						userData.username = username;
 						userData.credentials = credentials;
-						$("#login-msg").text(" Hi " + userData.data.first_name + ", login successful. ");
-						$("#usertext").text(userData.data.first_name + "'s health dashboard. ");
+						$("#login-msg").text(" Hi " + userData.username + ", login successful. ");
+						$("#usertext").text(userData.username + "'s health dashboard. ");
 						$("div.login").hide(1000);
 						$( "#password-dialog" ).popup( "close" );
-					} else {
-						$("#login-msg").text("Sorry, login failed");
-					}
-				}
-			);
-			apicall = 'user/services/';
-			myurl = baseurl + apicall;
-			$.ajax(
-				{
-					url: myurl,
-		    	type: 'GET',
-					datatype: 'json',
-		    	headers: {
-		        "Authorization": credentials
-    			}
-				} 
-			).done(
-				function(data) {
-					var json = $.parseJSON(data);
-					if(json.status == "ok" && json.code == 200) {
-            userData.services = json.services_linked;
-            userData.beddit = json.services_linked.indexOf('beddit');
-            userData.withings = json.services_linked.indexOf('withings');
-						$("#servicestext").text(" (" + userData.services.toString() + ") ");
+
 						_init();
+					} else {
+						// Login unsuccessful
+						$("#login-msg").text("Sorry, login failed");
 					}
 				}
 			);
@@ -796,3 +849,15 @@ var gaugeUI_gauge_js = (function(graphUI) {
 		gauges: _gauges
 	}
 }());
+
+ 		 	resizeCanvas = function (id, height){          
+				canvas = document.getElementById(id);
+				if (canvas.width  < window.innerWidth) {
+					canvas.width  = window.innerWidth - 50;
+				}
+				if(typeof(height) != 'number') {
+					canvas.height = canvas.width / 4;
+				} else {
+					canvas.height = height;
+				}
+			};

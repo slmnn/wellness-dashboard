@@ -51,82 +51,79 @@
 						<span id="servicestext"></span>
 						<span id="datetext"></span>
 				</p>
-					<div class="biggauge">
-						<span class="biggaugetext">Deep sleep</span>
-						<div id="deepsleep" style="width: 200; height: 160"></div>
+					<div id="beddit" style="visibility:hidden">
+						<div class="gauge">
+							<span class="gaugetext">Deep sleep</span>
+							<div id="deepsleep" style="width: 200; height: 160"></div>
+						</div>
+						<div class="gauge">				
+							<span class="gaugetext">Sleep efficiency</span>
+							<div id="efficiency"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Total sleep</span>
+							<div id="totalsleep"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Time awake</span>
+							<div id="timeawake"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Heart rate</span>
+							<div id="heartrate"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Noise</span>
+							<div id="noise"></div>
+						</div>
+
+					<div class="linegraph">
+						<div class="graphtext">Detailed sleep data (Beddit)</div>
+						<div class="graphselect">
+							<fieldset data-role="controlgroup" data-type="horizontal">
+								<input type="checkbox" checked="true" name="checkbox-noise" id="checkbox-noise" class="custom" data-mini="true" />
+								<label for="checkbox-noise">Noise</label>
+								<input type="checkbox" checked="true" name="checkbox-luminosity" id="checkbox-luminosity" class="custom" data-mini="true" />
+								<label for="checkbox-luminosity">Luminosity</label>    
+							</fieldset>
+						</div>
+						<canvas id="sleepstagegraph"></canvas>
+						<canvas id="heartlinegraph"></canvas>
 					</div>
-					<div class="gauge">		
-						<span class="gaugetext">Total sleep</span>
-						<div id="totalsleep"></div>
-					</div>
-					<div class="gauge">		
-						<span class="gaugetext">Time awake</span>
-						<div id="timeawake"></div>
-					</div>
-					<div class="gauge">				
-						<span class="gaugetext">Sleep efficiency</span>
-						<div id="efficiency"></div>
-					</div>
-					<div class="gauge">		
-						<span class="gaugetext">Heart rate</span>
-						<div id="heartrate"></div>
-					</div>
-					<div class="gauge">		
-						<span class="gaugetext">Noise</span>
-						<div id="noise"></div>
-					</div>
-				<div class="linegraph">
-					<div class="graphtext">Detailed sleep data</div>
-					<div class="graphselect">
-<!--
-						<fieldset data-type="horizontal">
-							<label for="flip-noise">Noise:</label>
-							<select name="flip-noise" id="flip-noise" data-role="slider" data-mini="true">
-								<option value="off">Off</option>
-								<option value="on">On</option>
-							</select>
-							<label for="flip-luminosity">Luminosity:</label>
-							<select name="flip-luminosity" id="flip-luminosity" data-role="slider" data-mini="true">
-								<option value="off">Off</option>
-								<option value="on">On</option>
-							</select>
-						</fieldset>
--->
-						<fieldset data-role="controlgroup" data-type="horizontal">
-							<input type="checkbox" checked="true" name="checkbox-noise" id="checkbox-noise" class="custom" data-mini="true" />
-							<label for="checkbox-noise">Noise</label>
-							<input type="checkbox" checked="true" name="checkbox-luminosity" id="checkbox-luminosity" class="custom" data-mini="true" />
-							<label for="checkbox-luminosity">Luminosity</label>    
-						</fieldset>
-					</div>
-					<canvas id="sleepstagegraph"></canvas>
-					<canvas id="heartlinegraph"></canvas>
+
 				</div>
 
-		<div data-role="popup" id="password-dialog">
-			<div data-role="content">
-				<p><span id="login-msg">Enter your credentials.</span></p>
-				<form action="javascript:void(0);">
-					<fieldset>
-						<div data-role="fieldcontain">
-		 	       	<input type="text" size="15" placeholder="username" name="username" id="username" />
+				<div id="fitbit" style="visibility: hidden">
+						<div class="gauge">		
+							<span class="gaugetext">Calories</span>
+							<div id="calories"></div>
 						</div>
-						<div data-role="fieldcontain">
-		 	       	<input type="password" size="15" placeholder="password" name="password" id="password"  autocomplete="off" />
+						<div class="gauge">		
+							<span class="gaugetext">Activity score</span>
+							<div id="activityscore"></div>
 						</div>
- 		       	<button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
-					</fieldset>
-				</form>
-			</div>
-		</div>
+						<div class="linegraph">
+							<div class="graphtext">Activity data (Fitbit)</div>
+							<canvas id="acitivitygraph"></canvas>
+						</div>
+				</div>
 
-<!--			
-			<div data-role="footer">
-				<p>Developed by Lively research group</p>
-			</div>
--->
-
-		</div> 
-
+				<div data-role="popup" id="password-dialog">
+					<div data-role="content">
+						<p><span id="login-msg">Enter your credentials.</span></p>
+						<form action="javascript:void(0);">
+							<fieldset>
+								<div data-role="fieldcontain">
+		 			       	<input type="text" size="15" placeholder="username" name="username" id="username" />
+								</div>
+								<div data-role="fieldcontain">
+		 	  		     	<input type="password" size="15" placeholder="password" name="password" id="password"  autocomplete="off" />
+								</div>
+ 		    		   	<button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
+							</fieldset>
+						</form>
+					</div>
+				</div>
+			</div> 
 	</body>
 </html>

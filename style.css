@@ -9,29 +9,27 @@ div.gauge {
   text-align: center;
 	border-radius: 8px;
 	float:left;
-	width: 200px;
-	height: 160px;
+	width: 160px;
+	height: 128px;
 	border: gray solid 1px;
 }
 div.biggauge {
   text-align: center;
 	border-radius: 15px;
 	float:left;
-	width: 400px;
-	height: 320px;
+	width: 280px;
+	height: 224px;
 	border: gray solid 1px;
 }
 span.biggaugetext {
-	font:20px arial,sans-serif;
+	font:14px arial,sans-serif;
 	text-align: center;
 	font-weight: bold;	
-	height: 2em;
 }
 span.gaugetext {
-	font:15px arial,sans-serif;
+	font:12px arial,sans-serif;
 	text-align: center;
 	font-weight: bold;	
-	height: 2em;
 }
 /*
 @media screen and (max-width: 400px) {
