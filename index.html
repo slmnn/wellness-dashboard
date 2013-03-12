@@ -51,6 +51,29 @@
 						<span id="servicestext"></span>
 						<span id="datetext"></span>
 				</p>
+
+				<div id="fitbit" style="visibility: hidden">
+						<div class="gauge">		
+							<span class="gaugetext">Burned Calories</span>
+							<div id="calories"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Activity score</span>
+							<div id="activityscore"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Steps taken</span>
+							<div id="steps"></div>
+						</div>
+<!--
+						<div class="linegraph">
+							<div class="graphtext">Activity data (Fitbit)</div>
+							<canvas id="acitivitygraph"></canvas>
+						</div>
+-->
+				</div>
+
+
 					<div id="beddit" style="visibility:hidden">
 						<div class="gauge">
 							<span class="gaugetext">Deep sleep</span>
@@ -93,20 +116,6 @@
 
 				</div>
 
-				<div id="fitbit" style="visibility: hidden">
-						<div class="gauge">		
-							<span class="gaugetext">Calories</span>
-							<div id="calories"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Activity score</span>
-							<div id="activityscore"></div>
-						</div>
-						<div class="linegraph">
-							<div class="graphtext">Activity data (Fitbit)</div>
-							<canvas id="acitivitygraph"></canvas>
-						</div>
-				</div>
 
 				<div data-role="popup" id="password-dialog">
 					<div data-role="content">

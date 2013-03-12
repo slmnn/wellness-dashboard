@@ -18,8 +18,8 @@ var userData = (function(userData) {
 }());
 
 var activityData = (function(activityData) {
-	var _goals = { 'caloriesOut': 1000, 'activeScore': 1000 };
-	var _summary = { 'caloriesOut': 0, 'activeScore': 0, 'activityCalories': 0 };
+	var _goals = { 'caloriesOut': 1000, 'activeScore': 1000, 'steps': 10000 };
+	var _summary = { 'caloriesOut': 0, 'activeScore': 0, 'activityCalories': 0, 'steps': 0 };
 	return {
 		goals: _goals,
 		summary: _summary
@@ -313,6 +313,7 @@ var gaugeUI = (function(graphUI) {
 	_initActivityGauges = function() {
 		_activityGauges.push(_initGauge('calories', 'null', 'good', activityData.goals.caloriesOut, activityData.summary.activityCalories, false, ''));
 		_activityGauges.push(_initGauge('activityscore', 'null', 'good', activityData.goals.activeScore, activityData.summary.activeScore, false, ''));
+		_activityGauges.push(_initGauge('steps', 'null', 'good', activityData.goals.steps, activityData.summary.steps, false, ''));
 	};
 
 	_setGaugesToZero = function() {
@@ -440,16 +441,21 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 	};
 
-	_weightCB = function(data) {
-		
+	_withingsCB = function(data) {
+		var json = $.parseJSON(data);
+		withingsData.bloodpressure = json.foo;
+		withingsData.weight = json.bar;
+		gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
+		gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.weightgoal, withingsData.weight);
 	};
 
 	_fitbitSummaryCB = function(data) {
 		var json = $.parseJSON(data);
-		activityData.goals = json.data.goals;
-		activityData.summary = json.data.summary;
+		activityData.goals = json.goals;
+		activityData.summary = json.summary;
 		gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
 		gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
+		gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, activityData.summary.steps);
 	};
 
 	_getData = function(apicall, cb) {
@@ -480,7 +486,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	_getFitbitSummaryData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		//graphUI.clearLineGraph('activitygraph');
-		_getData('fitbit/api/activities/' + daypath, _fitbitSummaryCB);
+		_getData('fitbit/api/activities/' + daypath + '/', _fitbitSummaryCB);
 	};
 
 	_init = function() {
