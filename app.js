@@ -27,6 +27,16 @@ var activityData = (function(activityData) {
 
 }());
 
+var withingsData = (function(withingsData) {
+	var _goals = { 'bloodpressure': 100, 'weight': 100 };
+	var _values = { 'bloodpressure': 0, 'weight': 0 };
+	return {
+		goals: _goals,
+		values: _values
+	}
+
+}());
+
 
 var weightData = (function(weightData) {
 	var _weight = 0;
@@ -316,6 +326,12 @@ var gaugeUI = (function(graphUI) {
 		_activityGauges.push(_initGauge('steps', 'null', 'good', activityData.goals.steps, activityData.summary.steps, false, ''));
 	};
 
+	var _withingsGauges = [];
+	_initWithingsGauges = function() {
+		_withingsGauges.push(_initGauge('bloodpressure', 'null', 'neutral', withingsData.goals.bloodpressure, withingsData.values.bloodpressure, false, ''));
+		_withingsGauges.push(_initGauge('weight', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, ''));
+	};
+
 	_setGaugesToZero = function() {
 		for(var i = 0; i < _gauges.length; i++) {
 			_setGaugeValue(_gauges[i], _gauges[i].maxvalue, 0);
@@ -366,8 +382,10 @@ var gaugeUI = (function(graphUI) {
 	return {
 		initSleepGauges: _initSleepGauges,
 		initActivityGauges: _initActivityGauges,
+		initWithingsGauges: _initWithingsGauges,
 		gauges: _gauges,
 		activityGauges: _activityGauges,
+		withingsGauges: _withingsGauges,
 		setGaugeValue: _setGaugeValue
 	}
 }());
@@ -443,10 +461,15 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_withingsCB = function(data) {
 		var json = $.parseJSON(data);
-		withingsData.bloodpressure = json.foo;
-		withingsData.weight = json.bar;
-		gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
-		gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.weightgoal, withingsData.weight);
+		if(json.data[0].measures.length > 0) {
+			withingsData.bloodpressure = json.data[0].measures[0];
+			withingsData.weight = json.data[0].measures[0];
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.weightgoal, withingsData.weight);
+		} else {
+			console.log("There is no Wihings data available", json);
+			$("#withings").css({"visibility":"hidden"});
+		}
 	};
 
 	_fitbitSummaryCB = function(data) {
@@ -473,7 +496,8 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 	
 	_getWeightData = function() {
-		_getData('api/unify/measures/' + '2013/03/04/days/1', _weightCB);
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		_getData('api/unify/measures/' + daypath + '/days/1/', _withingsCB);
 	};
 
 	_getSleepData =	function() {
@@ -528,6 +552,11 @@ var wellnessAPI =(function(wellnessAPI) {
 			_getFitbitSummaryData();
 			$("#fitbit").css({"visibility":"visible"});
 		}
+		if(userData.withings) {
+			gaugeUI.initWithingsGauges();
+			_getWeightData();
+			$("#withings").css({"visibility":"visible"});
+		}
 	};
 
 	_refreshData = function() {
@@ -536,7 +565,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 
 		if(userData.withings) {
-
+			_getWeightData();
 		}
 
 		if(userData.fitbit) {
