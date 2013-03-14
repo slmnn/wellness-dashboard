@@ -328,7 +328,7 @@ var gaugeUI = (function(graphUI) {
 
 	var _withingsGauges = [];
 	_initWithingsGauges = function() {
-		_withingsGauges.push(_initGauge('bloodpressure', 'null', 'neutral', withingsData.goals.bloodpressure, withingsData.values.bloodpressure, false, ''));
+//		_withingsGauges.push(_initGauge('bloodpressure', 'null', 'neutral', withingsData.goals.bloodpressure, withingsData.values.bloodpressure, false, ''));
 		_withingsGauges.push(_initGauge('weight', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, ''));
 	};
 
@@ -462,10 +462,11 @@ var wellnessAPI =(function(wellnessAPI) {
 	_withingsCB = function(data) {
 		var json = $.parseJSON(data);
 		if(json.data[0].measures.length > 0) {
+			$("#withings").css({"visibility":"visible"});
 			withingsData.bloodpressure = json.data[0].measures[0];
-			withingsData.weight = json.data[0].measures[0];
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.weightgoal, withingsData.weight);
+			withingsData.weight = json.data[0].measures[0].weight;
+//			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.weightgoal, withingsData.weight);
 		} else {
 			console.log("There is no Wihings data available", json);
 			$("#withings").css({"visibility":"hidden"});
