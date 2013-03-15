@@ -398,15 +398,13 @@ var wellnessAPI =(function(wellnessAPI) {
 		for(var i = 0; i < json.data.length; i++) {
 			var data = json.data[i];
 			if(data.analysis_valid == false) {
-				var x = document.getElementById("datetext");
-				x.innerHTML = "Analysis for " + data.date + " is invalid.";
-				_setGaugesToZero();
+				console.log('Invalid Beddit analysis on ' + data.date, data);
+				_setGaugesToZero(); // TODO: ei vaikuta toimivan
 				graphUI.clearLineGraph('heartlinegraph');
 				graphUI.clearLineGraph('sleepstagegraph');
 				return;
 			} else {
-				var x = document.getElementById("datetext");
-				x.innerHTML = "Analysis for " + data.date + ".";
+				console.log('Valid Beddit analysis available on ' + data.date, data);
 			}
 			sleepData.total = data.time_sleeping;
 			sleepData.deep = data.time_deep_sleep;
@@ -516,6 +514,8 @@ var wellnessAPI =(function(wellnessAPI) {
 	_init = function() {
 		var today = new Date();
 		_currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+		var x = document.getElementById("datetext");
+		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		if(userData.beddit) {
 			var apicall = 'beddit/api/user/' + userData.username + '/';
 			var myurl = baseurl + apicall;
@@ -588,11 +588,15 @@ var wellnessAPI =(function(wellnessAPI) {
 	_prevDay = function() {
 		_currentday = new Date(_currentday.getTime() - (24 * 60 * 60 * 1000));
 		_refreshData();
+		var x = document.getElementById("datetext");
+		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 	};
 
 	_nextDay = function() {
 		_currentday = new Date(_currentday.getTime() + (24 * 60 * 60 * 1000));
 		_refreshData();
+		var x = document.getElementById("datetext");
+		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 	};
 
