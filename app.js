@@ -462,14 +462,13 @@ var wellnessAPI =(function(wellnessAPI) {
 	_withingsCB = function(data) {
 		var json = $.parseJSON(data);
 		if(json.data[0].measures.length > 0) {
-			$("#withings").css({"visibility":"visible"});
 			withingsData.bloodpressure = json.data[0].measures[0];
 			withingsData.weight = json.data[0].measures[0].weight;
 //			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
 			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.weightgoal, withingsData.weight);
 		} else {
 			console.log("There is no Wihings data available", json);
-			$("#withings").css({"visibility":"hidden"});
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.weightgoal, 0);
 		}
 	};
 
@@ -547,16 +546,25 @@ var wellnessAPI =(function(wellnessAPI) {
     	resizeCanvas('sleepstagegraph', 40);
  			gaugeUI.initSleepGauges();
 			$("#beddit").css({"visibility":"visible"});
+		} 
+		else {
+			$("#beddit").css({"display":"none"});
 		}
 		if(userData.fitbit) {
 			gaugeUI.initActivityGauges();
 			_getFitbitSummaryData();
 			$("#fitbit").css({"visibility":"visible"});
 		}
+		else {
+			$("#fitbit").css({"display":"none"});
+		}
 		if(userData.withings) {
 			gaugeUI.initWithingsGauges();
 			_getWeightData();
 			$("#withings").css({"visibility":"visible"});
+		}
+		else {
+			$("#withings").css({"display":"none"});
 		}
 	};
 
