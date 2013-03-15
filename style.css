@@ -60,6 +60,7 @@ div.linegraph {
 	padding: 2px;
 	margin: 2px;	
 	border-radius: 15px;
+	display: block;
 }
 div.graphselect {
 	font:15px arial,sans-serif;	

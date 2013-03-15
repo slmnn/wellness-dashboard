@@ -20,9 +20,11 @@ var userData = (function(userData) {
 var activityData = (function(activityData) {
 	var _goals = { 'caloriesOut': 1000, 'activeScore': 1000, 'steps': 10000 };
 	var _summary = { 'caloriesOut': 0, 'activeScore': 0, 'activityCalories': 0, 'steps': 0 };
+	var _dataset = [];
 	return {
 		goals: _goals,
-		summary: _summary
+		summary: _summary,
+		dataset: _dataset
 	}
 
 }());
@@ -173,7 +175,7 @@ var graphUI = (function(graphUI) {
 	};
 
 	_graphs = [];
-	_drawGraphs = function(graphname) {
+	_drawGraphs = function() {
 		_clearLineGraph('heartlinegraph');
 		if($( "#checkbox-noise").is(':checked')) {
 			_drawBarGraph('heartlinegraph', sleepData.noisedata, 'rgba(0,255,0,0.4)', 'right', 'Noise', 140);
@@ -186,6 +188,11 @@ var graphUI = (function(graphUI) {
 		}
 		_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
 		_drawStages('sleepstagegraph', sleepData.stages);
+	};
+
+	_drawActivityGraph = function() {
+		_clearLineGraph('activitygraph');
+		_initActivityLineGraph('activitygraph', 'Steps', activityData.dataset);	
 	};
 
 	_drawBarGraph = function(canvasid, data, color, yaxispos, key, keyxpos) {
@@ -210,6 +217,45 @@ var graphUI = (function(graphUI) {
 		_graphs.push(bar);
 //		RGraph.RedrawCanvas(bar.canvas);
 	};
+
+	_initActivityLineGraph = function(canvasid, title, data) {
+		var labelarray = [];
+		var starttime = new Date(2000, 1, 1, 0, 0, 0, 0); // 00:00:00
+		var endtime = new Date(2000, 1, 1, 23, 59, 59, 0); // 23:59:59:00
+		var temptime = new Date(starttime.getTime());
+		while(temptime <= endtime) {
+			if(temptime.getMinutes() == 0)
+				labelarray.push(temptime.getHours() + ":" + (temptime.getMinutes()<10?'0':'') + temptime.getMinutes());
+			else
+				labelarray.push('');
+			temptime = new Date(temptime.getTime() + 5*60*1000);
+		}
+		var dataPoints = [];
+		for(var i = 0; i < data.length; i++) { dataPoints.push(data[i].value); }
+		var tooltips = [];
+		for(var i = 0; i < dataPoints.length; i++) { tooltips.push(dataPoints[i] + ''); }
+		var canvas  = document.getElementById(canvasid)
+		var line = new RGraph.Line(
+			canvasid, dataPoints
+		);
+		line.Set('chart.curvy', true);
+		line.Set('background.grid', false);
+		line.Set('chart.linewidth', 3);
+		line.Set('chart.hmargin', 5);
+		line.Set('chart.labels', labelarray);
+		line.Set('chart.tooltips', tooltips);
+		line.Set('chart.ylabels.count', 3);
+		line.Set('chart.scale.decimals', 0);
+		line.Set('chart.shadow.blur', 15);
+		line.Set('chart.ymin', 0);
+		line.Set('chart.key', [ title + "" ]);
+		line.Set('chart.key.position.x', 40);
+		line.Set('chart.key.position', 'gutter');
+		line.Set('chart.outofbounds', true);
+		line.Draw();
+		_graphs.push(line);
+	};
+
 
 	_initLineGraph = function(canvasid, title, data) {
 		var labelarray = [];
@@ -294,7 +340,8 @@ var graphUI = (function(graphUI) {
 
 	return {
 		clearLineGraph: _clearLineGraph,
-		drawGraphs: _drawGraphs
+		drawGraphs: _drawGraphs,
+		drawActivityGraph: _drawActivityGraph
 	}
 }());
 
@@ -507,8 +554,21 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_getFitbitSummaryData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		//graphUI.clearLineGraph('activitygraph');
 		_getData('fitbit/api/activities/' + daypath + '/', _fitbitSummaryCB);
+	};
+
+	_getFitbitActivityDataset =	function() {
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		graphUI.clearLineGraph('activitygraph');
+		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
+			var json = $.parseJSON(data);
+			if(json.data[0].steps != undefined) {
+				activityData.dataset = json.data[0].steps.dataset;
+				graphUI.drawActivityGraph();
+			} else {
+				console.log("No detailed activity data available on " + daypath, json);
+			}
+		});
 	};
 
 	_init = function() {
@@ -553,6 +613,8 @@ var wellnessAPI =(function(wellnessAPI) {
 		if(userData.fitbit) {
 			gaugeUI.initActivityGauges();
 			_getFitbitSummaryData();
+			_getFitbitActivityDataset();
+     	resizeCanvas('activitygraph');
 			$("#fitbit").css({"visibility":"visible"});
 		}
 		else {
@@ -579,6 +641,7 @@ var wellnessAPI =(function(wellnessAPI) {
 
 		if(userData.fitbit) {
 			_getFitbitSummaryData();
+			_getFitbitActivityDataset();
 		}
 	
 	};
@@ -904,7 +967,7 @@ var gaugeUI_gauge_js = (function(graphUI) {
 					canvas.width  = window.innerWidth - 50;
 				}
 				if(typeof(height) != 'number') {
-					canvas.height = canvas.width / 4;
+					canvas.height = canvas.width / 8;
 				} else {
 					canvas.height = height;
 				}
