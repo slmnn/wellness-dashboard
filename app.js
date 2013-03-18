@@ -546,7 +546,8 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 
 	_getSleepData =	function() {
-		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		// Beddit night is the date that begins during the night -> date + 1
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate() + 1);
 		graphUI.clearLineGraph('heartlinegraph');
 		graphUI.clearLineGraph('sleepstagegraph');
 		_getData('api/unify/sleep/' + daypath + '/days/1/', _sleepCB);
@@ -562,6 +563,14 @@ var wellnessAPI =(function(wellnessAPI) {
 		graphUI.clearLineGraph('activitygraph');
 		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
 			var json = $.parseJSON(data);
+
+			activityData.goals = json.data[0].goals;
+			activityData.summary = json.data[0].summary;
+
+			gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
+			gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
+			gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, activityData.summary.steps);
+
 			if(json.data[0].steps != undefined) {
 				activityData.dataset = json.data[0].steps.dataset;
 				graphUI.drawActivityGraph();
@@ -571,9 +580,17 @@ var wellnessAPI =(function(wellnessAPI) {
 		});
 	};
 
+	_setDate = function(dateString) {
+		_currentday = new Date(dateString);
+		if(_currentday == 'Invalid Date')
+			_currentday = new Date();
+		_refreshData();
+	};
+
 	_init = function() {
 		var today = new Date();
 		_currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		if(userData.beddit) {
@@ -612,7 +629,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 		if(userData.fitbit) {
 			gaugeUI.initActivityGauges();
-			_getFitbitSummaryData();
+//			_getFitbitSummaryData();
 			_getFitbitActivityDataset();
      	resizeCanvas('activitygraph');
 			$("#fitbit").css({"visibility":"visible"});
@@ -631,6 +648,9 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 
 	_refreshData = function() {
+		var x = document.getElementById("datetext");
+		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
+
 		if(userData.beddit) {
      	_getSleepData();
 		}
@@ -640,7 +660,6 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 
 		if(userData.fitbit) {
-			_getFitbitSummaryData();
 			_getFitbitActivityDataset();
 		}
 	
@@ -650,16 +669,14 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_prevDay = function() {
 		_currentday = new Date(_currentday.getTime() - (24 * 60 * 60 * 1000));
+		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_refreshData();
-		var x = document.getElementById("datetext");
-		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 	};
 
 	_nextDay = function() {
 		_currentday = new Date(_currentday.getTime() + (24 * 60 * 60 * 1000));
+		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_refreshData();
-		var x = document.getElementById("datetext");
-		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 	};
 
@@ -717,6 +734,7 @@ var wellnessAPI =(function(wellnessAPI) {
 				}
 			);
 		},
+		setDate: _setDate,
 		getSleepData: _getSleepData,
 		getData: _getData,
 		nextDay: _nextDay,

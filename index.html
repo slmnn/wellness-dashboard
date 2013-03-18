@@ -5,6 +5,7 @@
 		<title>Wellness Dashboard</title>
 		<link rel="stylesheet" type="text/css" href="style.css">
 		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+		<link rel="stylesheet" href="./lib/mobiscroll/css/mobiscroll.custom-2.4.5.min.css" />
 <!--		<script type="text/javascript" src="./lib/gauge.js"></script> -->
 		<script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/justgage.1.0.1.js"></script>		
 		<script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/raphael.2.1.0.min.js"></script>		
@@ -17,7 +18,8 @@
 		<script src="./lib/RGraph/libraries/RGraph.hprogress.js" ></script>
 		<script src="./lib/RGraph/libraries/RGraph.bar.js" ></script>
 		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
--		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" ></script>
 		<script type="text/javascript" src="./app.js"></script>
 	</head>
 	<body>
@@ -37,20 +39,30 @@
 			$( "#checkbox-luminosity" ).live( "change", function(event, ui) {
 				graphUI.drawGraphs();
 			});
-			setTimeout('$( "#password-dialog" ).popup( "open" )', 1000);
+			$(document).ready(function() {
+	    	$('#datescroller').mobiscroll().date({
+ 	        theme: 'jqm',
+ 	        display: 'bubble',
+ 	        mode: 'mixed',
+ 	        animate: 'fade',
+ 	        dateOrder: 'mmD ddyy',
+					onSelect: function(dateText, instance) { 
+						wellnessAPI.setDate($('#datescroller').mobiscroll('getDate')); 
+					}
+ 		   	});
+				setTimeout('$( "#password-dialog" ).popup( "open" )', 10);
+			});
 		</script>
 		<div data-role="page"> 
 			<div data-role="header">
-				<a href="#" data-icon="arrow-l" id="button-prev">Prev Day</a>
-				<h1>Wellness Dashboard</h1>
-				<a href="#" data-icon="arrow-r" id="button-next">Next Day</a>
-			</div>		
+				<h1><span id="usertext">Wellness Dashboard</span></h1>
+			</div>
 			<div data-role="content">
-				<p>
-						<span id="usertext"></span>
-						<span id="datetext"></span>
-						<span id="servicestext"></span>
-				</p>
+				<div style="text-align: center; display:block; width:auto;">
+					<input type="button" data-icon="arrow-l" id="button-prev" data-theme="b" data-inline="true" value="Prev Day" />
+					<input name="datescroller" id="datescroller" class="i-txt" data-theme="b" style="display:inline-block;width:auto;" />
+					<input type="button" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
+				</div>
 
 				<div id="withings" style="visibility: hidden">
 <!--
@@ -114,7 +126,7 @@
 					<div class="linegraph">
 						<div class="graphtext">Detailed sleep data</div>
 						<div class="graphselect">
-							<fieldset data-role="controlgroup" data-type="horizontal">
+							<fieldset data-role="controlgroup" data-mini="true" data-type="horizontal" style="display: inline; float: right; padding-right: 0.5em;">
 								<input type="checkbox" checked="true" name="checkbox-noise" id="checkbox-noise" class="custom" data-mini="true" />
 								<label for="checkbox-noise">Noise</label>
 								<input type="checkbox" checked="true" name="checkbox-luminosity" id="checkbox-luminosity" class="custom" data-mini="true" />
@@ -126,6 +138,10 @@
 					</div>
 				</div>
 
+				<p style="display:none">
+						<span id="datetext"></span>
+						<span id="servicestext"></span>
+				</p>
 
 				<div data-role="popup" id="password-dialog">
 					<div data-role="content">

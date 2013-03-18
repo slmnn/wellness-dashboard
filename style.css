@@ -65,12 +65,18 @@ div.linegraph {
 div.graphselect {
 	font:15px arial,sans-serif;	
 	text-align: right;
-	padding: 0 25px 0 0
+	padding: 0 25px 0 0;
+	display: inline; // force inline
+	float: right;
 }
 div.graphtext {
 	font:20px arial,sans-serif;
 	text-align: center;
-	font-weight: bold;	
+	font-weight: bold;
+	position: relative;
+	left: 4%;
+	float: left;
+	display: inline-block;
 }
 div.login {
 	font:15px arial,sans-serif;	
