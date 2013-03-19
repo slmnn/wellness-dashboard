@@ -6,6 +6,8 @@ var userData = (function(userData) {
 	var _beddit = false;
 	var _withings = false;
 	var _fitbit = false;
+	var _nightstart = null;
+	var _nightend = null;
 	return {
 		username: _username,
 		data: _data,
@@ -30,8 +32,8 @@ var activityData = (function(activityData) {
 }());
 
 var withingsData = (function(withingsData) {
-	var _goals = { 'bloodpressure': 100, 'weight': 100 };
-	var _values = { 'bloodpressure': 0, 'weight': 0 };
+	var _goals = { 'sysbloodpressure': 180, 'pulse': 100, 'diasbloodpressure': 110, 'weight': 140 };
+	var _values = { 'sysbloodpressure': 0, 'pulse': 0, 'diasbloodpressure': 0, 'weight': 0 };
 	return {
 		goals: _goals,
 		values: _values
@@ -259,6 +261,8 @@ var graphUI = (function(graphUI) {
 
 	_initLineGraph = function(canvasid, title, data) {
 		var labelarray = [];
+
+/*
 		var starttime = new Date(); // Start time today
 		starttime.setHours(userData.data.night_start_time.split(':')[0]);
 		starttime.setMinutes(userData.data.night_start_time.split(':')[1]);
@@ -269,6 +273,11 @@ var graphUI = (function(graphUI) {
 		endtime.setMinutes(userData.data.night_end_time.split(':')[1]);
 		endtime.setSeconds(0);
 		endtime.setMilliseconds(0);
+*/
+
+    var starttime = new Date(sleepData.localstarttime.getTime()); // Start time today
+    var endtime = new Date(sleepData.localendtime.getTime()); // End time tomorrow
+
 		var temptime = new Date(starttime.getTime());
 		console.log(starttime, endtime, temptime);
 		while(temptime <= endtime) {
@@ -375,8 +384,10 @@ var gaugeUI = (function(graphUI) {
 
 	var _withingsGauges = [];
 	_initWithingsGauges = function() {
-//		_withingsGauges.push(_initGauge('bloodpressure', 'null', 'neutral', withingsData.goals.bloodpressure, withingsData.values.bloodpressure, false, ''));
-		_withingsGauges.push(_initGauge('weight', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, ''));
+		_withingsGauges.push(_initGauge('sysbloodpressure', 'null', 'neutral', withingsData.goals.sysbloodpressure, withingsData.values.sysbloodpressure, false, 'mmHg'));
+		_withingsGauges.push(_initGauge('diasbloodpressure', 'null', 'neutral', withingsData.goals.diasbloodpressure, withingsData.values.diasbloodpressure, false, 'mmHg'));
+		_withingsGauges.push(_initGauge('weight', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, 'kg'));
+		_withingsGauges.push(_initGauge('withingspulse', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, 'bpm'));
 	};
 
 	_setGaugesToZero = function() {
@@ -422,7 +433,7 @@ var gaugeUI = (function(graphUI) {
 			title: "foo"
 	  }); 
 		g.convert = gaugeconversion;
-		g.unittxt = unittxt;
+		g.unittxt = ' ' + unittxt;
 		return g;
 	};
 
@@ -444,8 +455,12 @@ var wellnessAPI =(function(wellnessAPI) {
 		var json = $.parseJSON(data);
 		for(var i = 0; i < json.data.length; i++) {
 			var data = json.data[i];
+			if(data == null || data.analysis_valid == null) {
+				console.log("No valid sleep data available on " + _currentday.toDateString(), data);
+				return;
+			}
 			if(data.analysis_valid == false) {
-				console.log('Invalid Beddit analysis on ' + data.date, data);
+				console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), data);
 				_setGaugesToZero(); // TODO: ei vaikuta toimivan
 				graphUI.clearLineGraph('heartlinegraph');
 				graphUI.clearLineGraph('sleepstagegraph');
@@ -506,14 +521,37 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_withingsCB = function(data) {
 		var json = $.parseJSON(data);
-		if(json.data[0].measures.length > 0) {
-			withingsData.bloodpressure = json.data[0].measures[0];
-			withingsData.weight = json.data[0].measures[0].weight;
-//			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.bloodpressuregoal, withingsData.bloodpressure);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.weightgoal, withingsData.weight);
-		} else {
-			console.log("There is no Wihings data available", json);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.weightgoal, 0);
+		if(json.data[0].latest.weight != undefined) {
+			withingsData.values.weight = Math.round(json.data[0].latest.weight.value * 10) / 10;
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[2], withingsData.goals.weight, withingsData.values.weight);
+		}
+		else {
+			console.log("There is no Withings weight data available", json);
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[2], withingsData.weightgoal, 0);
+		}
+		if(json.data[0].latest.sysPressure != undefined) {
+			withingsData.values.sysbloodpressure = json.data[0].latest.sysPressure.value;
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.goals.sysbloodpressure, withingsData.values.sysbloodpressure);
+		}
+		else {
+			console.log("There is no Withings systolic pressure available", json);
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.goals.sysbloodpressure, 0);
+		}
+		if(json.data[0].latest.diasPressure != undefined) {
+			withingsData.values.diasbloodpressure = json.data[0].latest.diasPressure.value;
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.goals.diasbloodpressure, withingsData.values.diasbloodpressure);
+		}
+		else {
+			console.log("There is no Withings diastolic pressure available", json);
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.goals.diasbloodpressure, 0);
+		}
+		if(json.data[0].latest.pulse != undefined) {
+			withingsData.values.pulse = json.data[0].latest.pulse.value;
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[3], withingsData.goals.pulse, withingsData.values.pulse);
+		}
+		else {
+			console.log("There is no Withings pulse available", json);
+			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[3], withingsData.goals.pulse, 0);
 		}
 	};
 
@@ -581,19 +619,29 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 
 	_setDate = function(dateString) {
-		_currentday = new Date(dateString);
-		if(_currentday == 'Invalid Date')
-			_currentday = new Date();
+		_currentday = Date.parse(dateString);
+		if(_currentday == 'Invalid Date' || _currentday == null)
+			_currentday = Date.today();
+		_disableNextDayButton();
 		_refreshData();
 	};
 
+	_disableNextDayButton = function() {
+		if(Date.compare(_currentday.clearTime(), _today) > 0) {
+			$( "#button-next" ).button( "disable" );
+		}	else {
+			$( "#button-next" ).button( "enable" );
+		}
+	};
+
+	var _today = Date.today();
 	_init = function() {
-		var today = new Date();
-		_currentday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+		_currentday = new Date(_today.addDays(-1));
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		if(userData.beddit) {
+/*
 			var apicall = 'beddit/api/user/' + userData.username + '/';
 			var myurl = baseurl + apicall;
 			$.ajax(
@@ -619,6 +667,8 @@ var wellnessAPI =(function(wellnessAPI) {
 					}
 				}
 			);
+*/
+     	_getSleepData();
      	resizeCanvas('heartlinegraph');
     	resizeCanvas('sleepstagegraph', 40);
  			gaugeUI.initSleepGauges();
@@ -668,14 +718,16 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _currentday;
 
 	_prevDay = function() {
-		_currentday = new Date(_currentday.getTime() - (24 * 60 * 60 * 1000));
+		_currentday = _currentday.addDays(-1);
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
+		_disableNextDayButton();
 		_refreshData();
 	};
 
 	_nextDay = function() {
-		_currentday = new Date(_currentday.getTime() + (24 * 60 * 60 * 1000));
+		_currentday = _currentday.addDays(1);
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
+		_disableNextDayButton();
 		_refreshData();
 		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 	};
@@ -722,14 +774,14 @@ var wellnessAPI =(function(wellnessAPI) {
 						userData.username = username;
 						userData.credentials = credentials;
 						$("#login-msg").text(" Hi " + userData.username + ", login successful. ");
-						$("#usertext").text(userData.username + "'s health dashboard. ");
+						$("#usertext").text(userData.username + "'s wellness dashboard");
 						$("div.login").hide(1000);
 						$( "#password-dialog" ).popup( "close" );
 
 						_init();
 					} else {
 						// Login unsuccessful
-						$("#login-msg").text("Sorry, login failed");
+						$("#login-msg").text("Sorry, login failed!");
 					}
 				}
 			);

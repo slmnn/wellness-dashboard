@@ -45,6 +45,7 @@ span.gaugetext {
 		width: 120px;
 		height: 96px;
 		border: gray solid 1px;
+		display: inline-block;
 	}
 	div.biggauge {
 		float:left;

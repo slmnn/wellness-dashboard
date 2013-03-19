@@ -20,6 +20,7 @@
 		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" ></script>
+		<script type="text/javascript" src="./lib/date.js"></script>
 		<script type="text/javascript" src="./app.js"></script>
 	</head>
 	<body>
@@ -40,12 +41,14 @@
 				graphUI.drawGraphs();
 			});
 			$(document).ready(function() {
+				var today = new Date();
 	    	$('#datescroller').mobiscroll().date({
  	        theme: 'jqm',
  	        display: 'bubble',
  	        mode: 'mixed',
  	        animate: 'fade',
  	        dateOrder: 'mmD ddyy',
+					maxDate: today,
 					onSelect: function(dateText, instance) { 
 						wellnessAPI.setDate($('#datescroller').mobiscroll('getDate')); 
 					}
@@ -59,25 +62,31 @@
 			</div>
 			<div data-role="content">
 				<div style="text-align: center; display:block; width:auto;">
-					<input type="button" data-icon="arrow-l" id="button-prev" data-theme="b" data-inline="true" value="Prev Day" />
-					<input name="datescroller" id="datescroller" class="i-txt" data-theme="b" style="display:inline-block;width:auto;" />
-					<input type="button" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
+					<input type="button" data-mini="true" data-icon="arrow-l" id="button-prev" data-theme="b" data-inline="true" value="Prev Day" />
+					<input name="datescroller" data-mini="true" id="datescroller" class="i-txt" data-theme="b" style="display:inline-block;width:auto;" />
+					<input type="button" data-mini="true" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
 				</div>
 
-				<div id="withings" style="visibility: hidden">
-<!--
+				<div id="withings" style="visibility: hidden; text-align:center;">
 						<div class="gauge">		
-							<span class="gaugetext">Blood pressure</span>
-							<div id="bloodpressure"></div>
+							<span class="gaugetext">Systolic pressure</span>
+							<div id="sysbloodpressure"></div>
 						</div>
--->
+						<div class="gauge">		
+							<span class="gaugetext">Diastolic pressure</span>
+							<div id="diasbloodpressure"></div>
+						</div>
+						<div class="gauge">		
+							<span class="gaugetext">Heart rate</span>
+							<div id="withingspulse"></div>
+						</div>
 						<div class="gauge">		
 							<span class="gaugetext">Weight</span>
 							<div id="weight"></div>
 						</div>
 				</div>
 
-				<div id="fitbit" style="visibility: hidden">
+				<div id="fitbit" style="visibility: hidden; text-align:center;">
 						<div class="gauge">		
 							<span class="gaugetext">Burned calories</span>
 							<div id="calories"></div>
@@ -97,7 +106,7 @@
 				</div>
 
 
-					<div id="beddit" style="visibility:hidden">
+					<div id="beddit" style="visibility:hidden; text-align:center;">
 						<div class="gauge">
 							<span class="gaugetext">Deep sleep</span>
 							<div id="deepsleep" style="width: 200; height: 160"></div>
@@ -115,7 +124,7 @@
 							<div id="timeawake"></div>
 						</div>
 						<div class="gauge">		
-							<span class="gaugetext">Heart rate</span>
+							<span class="gaugetext">Resting heart rate</span>
 							<div id="heartrate"></div>
 						</div>
 						<div class="gauge">		
@@ -143,7 +152,7 @@
 						<span id="servicestext"></span>
 				</p>
 
-				<div data-role="popup" id="password-dialog">
+				<div data-role="popup" id="password-dialog" data-dismissible="false">
 					<div data-role="content">
 						<p><span id="login-msg">Enter your credentials.</span></p>
 						<form action="javascript:void(0);">
