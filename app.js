@@ -23,10 +23,12 @@ var activityData = (function(activityData) {
 	var _goals = { 'caloriesOut': 1000, 'activeScore': 1000, 'steps': 10000 };
 	var _summary = { 'caloriesOut': 0, 'activeScore': 0, 'activityCalories': 0, 'steps': 0 };
 	var _dataset = [];
+	var _activities = [];
 	return {
 		goals: _goals,
 		summary: _summary,
-		dataset: _dataset
+		dataset: _dataset,
+		activities: _activities
 	}
 
 }());
@@ -194,7 +196,14 @@ var graphUI = (function(graphUI) {
 
 	_drawActivityGraph = function() {
 		_clearLineGraph('activitygraph');
-		_initActivityLineGraph('activitygraph', 'Steps', activityData.dataset);	
+		var line = _initActivityLineGraph('activitygraph', 'Steps', activityData.dataset);	
+		if(activityData.activities != undefined) {
+			for(var i = 0; i < activityData.activities.length; i++) {
+				var a = activityData.activities[i];
+				if(a.hasStartTime == true)
+					_addMarker(a.startTime, line, 'activitygraph', a.name + " " + secondsToString(a.duration/1000), a.description, a.name.substring(0,1));
+			}
+		}
 	};
 
 	_drawBarGraph = function(canvasid, data, color, yaxispos, key, keyxpos) {
@@ -256,6 +265,23 @@ var graphUI = (function(graphUI) {
 		line.Set('chart.outofbounds', true);
 		line.Draw();
 		_graphs.push(line);
+		return line;
+	};
+
+	_addMarker = function (time, line, canvasid, header, text, iconletter) {
+		// Resolving X coordinate from time
+		var time = Date.parse(time);
+		if(time == null) return;
+		var timelineStartTime = Date.today();
+		var hours = time.getHours() - timelineStartTime.getHours();
+		var minutes = time.getMinutes() - timelineStartTime.getMinutes(); // round to nearest 5 minutes
+		var xCoord = hours * 12 + Math.round(minutes / 5);
+
+		// Add a notification just for test
+		var marker1 = new RGraph.Drawing.Marker1(canvasid, line.coords[xCoord][0], line.coords[1][1], 15, iconletter);
+		marker1.Set('chart.tooltips', ['<b>' + header + '</b><br />' + text]);
+		marker1.Set('chart.highlight.fill', 'rgba(255,0,0,0.7)');
+		marker1.Draw();		
 	};
 
 
@@ -350,7 +376,8 @@ var graphUI = (function(graphUI) {
 	return {
 		clearLineGraph: _clearLineGraph,
 		drawGraphs: _drawGraphs,
-		drawActivityGraph: _drawActivityGraph
+		drawActivityGraph: _drawActivityGraph,
+		addMarker: _addMarker
 	}
 }());
 
@@ -585,7 +612,8 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_getSleepData =	function() {
 		// Beddit night is the date that begins during the night -> date + 1
-		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate() + 1);
+		var tomorrow = _currentday.clone().add(1).day();
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (tomorrow.getDate());
 		graphUI.clearLineGraph('heartlinegraph');
 		graphUI.clearLineGraph('sleepstagegraph');
 		_getData('api/unify/sleep/' + daypath + '/days/1/', _sleepCB);
@@ -601,14 +629,23 @@ var wellnessAPI =(function(wellnessAPI) {
 		graphUI.clearLineGraph('activitygraph');
 		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
 			var json = $.parseJSON(data);
-
-			activityData.goals = json.data[0].goals;
-			activityData.summary = json.data[0].summary;
-
-			gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
-			gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
-			gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, activityData.summary.steps);
-
+			if(json.data[0].activities != undefined) {
+				activityData.activities = json.data[0].activities;
+			} else {
+				console.log("No activities data available on " + daypath, json);
+			}
+			if(json.data[0].goals != undefined && json.data[0].summary != undefined) {
+				activityData.goals = json.data[0].goals;
+				activityData.summary = json.data[0].summary;
+				gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
+				gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
+				gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, activityData.summary.steps);
+			} else {
+				console.log("No activity goals / summary available on " + daypath, json);
+				gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, 0);
+				gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, 0);
+				gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, 0);
+			}
 			if(json.data[0].steps != undefined) {
 				activityData.dataset = json.data[0].steps.dataset;
 				graphUI.drawActivityGraph();
@@ -780,7 +817,7 @@ var wellnessAPI =(function(wellnessAPI) {
 
 						_init();
 					} else {
-						// Login unsuccessful
+						// Login unsuccessful, does not work as the server fails to respond
 						$("#login-msg").text("Sorry, login failed!");
 					}
 				}
