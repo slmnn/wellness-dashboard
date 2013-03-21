@@ -200,8 +200,12 @@ var graphUI = (function(graphUI) {
 		if(activityData.activities != undefined) {
 			for(var i = 0; i < activityData.activities.length; i++) {
 				var a = activityData.activities[i];
-				if(a.hasStartTime == true)
-					_addMarker(a.startTime, line, 'activitygraph', a.name + " " + secondsToString(a.duration/1000), a.description, a.name.substring(0,1));
+				if(a.hasStartTime == true) {
+					var name = a.name.split(' ');
+					name = name[0].split(',');
+					name = name[0];
+					_addMarker(a.startTime, line, 'activitygraph', a.name + " " + secondsToString(a.duration/1000), a.description, name.substring(0,6) + "...");
+				}
 			}
 		}
 	};
@@ -268,7 +272,7 @@ var graphUI = (function(graphUI) {
 		return line;
 	};
 
-	_addMarker = function (time, line, canvasid, header, text, iconletter) {
+	_addMarker = function (time, line, canvasid, header, text, note) {
 		// Resolving X coordinate from time
 		var time = Date.parse(time);
 		if(time == null) return;
@@ -278,9 +282,15 @@ var graphUI = (function(graphUI) {
 		var xCoord = hours * 12 + Math.round(minutes / 5);
 
 		// Add a notification just for test
-		var marker1 = new RGraph.Drawing.Marker1(canvasid, line.coords[xCoord][0], line.coords[1][1], 15, iconletter);
+		var dataValue = line.original_data[0][xCoord];
+		console.log('Line value at marker ' + note +  ' point: ' + dataValue, line);
+		var marker1 = new RGraph.Drawing.Marker2(canvasid, line.coords[xCoord][0], line.coords[line.original_data[0][xCoord]][1], note);
 		marker1.Set('chart.tooltips', ['<b>' + header + '</b><br />' + text]);
-		marker1.Set('chart.highlight.fill', 'rgba(255,0,0,0.7)');
+		marker1.Set('chart.highlight.fill', 'rgba(255,0,0,0.3)');
+		marker1.Set('chart.tooltips.event', 'onmousemove');
+		marker1.Set('chart.voffset', 50);
+		marker1.Set('chart.text.size', 10);
+		marker1.Set('chart.fillstyle', 'rgba(255,255,255,0.5)');
 		marker1.Draw();		
 	};
 
