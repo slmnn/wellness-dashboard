@@ -19,476 +19,456 @@ var userData = (function(userData) {
 	}
 }());
 
-var activityData = (function(activityData) {
-	var _goals = { 'caloriesOut': 1000, 'activeScore': 1000, 'steps': 10000 };
-	var _summary = { 'caloriesOut': 0, 'activeScore': 0, 'activityCalories': 0, 'steps': 0 };
-	var _dataset = [];
-	var _activities = [];
-	return {
-		goals: _goals,
-		summary: _summary,
-		dataset: _dataset,
-		activities: _activities
-	}
 
+var gaugeUI = (function(gaugeUI) {
+  _createGauge = function(targetDIVid, options, sourcedata) {
+    var gauge = $('#gauge_' + options.id).highcharts();
+    if(typeof(gauge) == 'undefined') {
+      var HTML = $('<div id="gaugewrapper" class="masonry-box"><span class="gaugetext">' + options.name + '</span></br><div id="gauge_' + options.id + '" class="gauge"></div></div>');
+      $(targetDIVid).append(HTML).masonry('appended', HTML);
+      $('#masonry-container').masonry( 'reload' );
+      $("#gauge_" + options.id).highcharts({
+    
+        chart: {
+            type: 'gauge',
+            plotBackgroundColor: null,
+            plotBackgroundImage: null,
+            plotBorderWidth: 0,
+            plotShadow: false,
+            spacingTop: 2,
+            spacingBottom: 7,
+            spacingLeft: 2,
+            spacingRight: 2
+        },      
+        pane: {
+            startAngle: -150,
+            endAngle: 150,
+            background: [{
+                backgroundColor: {
+                    linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                    stops: [
+                        [0, '#FFF'],
+                        [1, '#333']
+                    ]
+                },
+                borderWidth: 0,
+                outerRadius: '109%'
+            }, {
+                backgroundColor: {
+                    linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                    stops: [
+                        [0, '#333'],
+                        [1, '#FFF']
+                    ]
+                },
+                borderWidth: 1,
+                outerRadius: '107%'
+            }, {
+                // default background
+            }, {
+                backgroundColor: '#DDD',
+                borderWidth: 0,
+                outerRadius: '105%',
+                innerRadius: '103%'
+            }]
+        },
+        title: {
+          text: null
+        },
+        // the value axis
+        yAxis: {
+            min: options.min,
+            max: options.max,
+            
+            minorTickInterval: 'auto',
+            minorTickWidth: 1,
+            minorTickLength: 3,
+            minorTickPosition: 'inside',
+            minorTickColor: '#666',
+    
+            tickPixelInterval: 30,
+            tickWidth: 2,
+            tickPosition: 'inside',
+            tickLength: 4,
+            tickColor: '#666',
+            labels: {
+                step: 2,
+                rotation: 'auto',
+                enabled: false
+            },
+            title: {
+                text: sourcedata.valueSuffix,
+                margin: 0
+            },
+            plotBands: options.bands
+        },
+    
+        series: [{
+            name: options.name,
+            data: [sourcedata.value],
+            tooltip: {
+                valueSuffix: sourcedata.valueSuffix
+            }
+        }]
+      });
+    } else {
+      var point = gauge.series[0].points[0];
+      point.update(sourcedata.value);
+    }
+  };
+
+  _init = function() {
+		amplify.subscribe('new_gauge', function(d) {
+      console.log('new_gauge', d);
+			_createGauge(d.targetDIVid, d.options, d.data);
+		});
+  };
+  return {
+    init: _init
+  }
 }());
 
-var withingsData = (function(withingsData) {
-	var _goals = { 'sysbloodpressure': 180, 'pulse': 100, 'diasbloodpressure': 110, 'weight': 140 };
-	var _values = { 'sysbloodpressure': 0, 'pulse': 0, 'diasbloodpressure': 0, 'weight': 0 };
-	return {
-		goals: _goals,
-		values: _values
-	}
-
-}());
-
-
-var weightData = (function(weightData) {
-	var _weight = 0;
-	var _weighttrend = 0;
-
-	return {
-		weight: _weight,
-		trend: _weighttrend
-	}
-
-}());
-
-var sleepData = (function(sleepData) {
-	var _deepamount = 0;
-  var _deepamountgoal = 5200;
-	var _totalamount = 0;
-  var _totalamountgoal = 36000;
-	var _timeinbed = 0;
-	var _efficiency = 0;
-	var _heartrate = 0;
-	var _heartratedata = [];
-  var _noise = [0,0];
-	var _lightdata = [];
-	var _stesslevel = 0;
-	var _stages = [];
-	var _date = undefined;
-	var _localstarttime = undefined;
-	var _localendtime = undefined;
-
-	_timeawake = function() {
-		return Math.abs( this.timeinbed - this.total );
- 	};
-
-	_averageNoise = function() {
-		var sum = this.noisedata.reduce(function(a, b) { return a + b });
-		return Math.round( sum / this.noisedata.length );
-	};
-
-	return {
-		total: _totalamount,
-		totalgoal: _totalamountgoal,
-		deep: _deepamount,
-		deepgoal: _deepamountgoal,
-		timeinbed: _timeinbed,
-		efficiency: _efficiency,
-		heartrate: _heartrate,		
-		timeawake: _timeawake,
-		heartratedata: _heartratedata,
-		noise: _averageNoise,
-		noisedata: _noise,
-		lightdata: _lightdata,
-		stresslevel: _stesslevel,
-		stages: _stages,
-		date: _date,
-		localstarttime: _localstarttime,
-		localendtime: _localendtime
-	}
-}());
-
-var graphUI = (function(graphUI) {
-	_drawStages = function(canvasid, data) {
-    var starttime = new Date(sleepData.localstarttime.getTime()); // Start time today
-    var endtime = new Date(sleepData.localendtime.getTime()); // End time tomorrow
-
-		var total = endtime.getTime() - starttime.getTime();
-
-		var parsedData = [];
-		var colors = [];
-		var tooltips = [];
+var bulletChartUI = (function(bulletChartUI) {
+	var chart, parentDIVID, margin, width, height;
 	
-		var stagelength = 0;
-		for(var i = 0; i < data.length; i++) {
-			if(i == 0) {
-				stagelength = 5*60*1000;
-				continue;
-			} else {
-				if(i != data.length-1 && data[i-1][1] === data[i][1]) {
-					stagelength += 5*60*1000;
-					continue;
-				} else {
-					var progress = Math.round(stagelength / total * 100 * 100) / 100;
-					parsedData.push(progress);
-					stagelength = 5*60*1000;
-					switch(data[i-1][1]) {
-						case 'A':
-							colors.push('rgba(44, 44, 44, 0.4)');
-							tooltips.push('Away');
-							break;
-						case 'W':
-							colors.push('rgba(255, 0, 0, 0.6)');
-							tooltips.push('Wake');
-							break;
-						case 'L':		
-							colors.push('rgba(0, 196, 255, 0.6)');
-							tooltips.push('Light');
-							break;
-						case 'R':
-							colors.push('rgba(0, 196, 36, 0.6)');
-							tooltips.push('REM');
-							break;
-						case 'D':
-							colors.push('rgba(0, 63, 255, 0.6)');
-							tooltips.push('Deep');
-							break;
-						default:
-							colors.push('rgba(255, 147, 0, 1)');
-							tooltips.push('Unknown');
-							break;					
-					}
-				}
-			} 
-//			console.log(data[i][0], data[i][1], activitystart, stagelength, progress, tooltips[i]);
-		}
-		var progress1 = new RGraph.HProgress(canvasid, parsedData, 100);
-		progress1.Set('colors', colors);
-		progress1.Set('tooltips', tooltips);
-		progress1.Set('chart.tickmarks', false);
-		progress1.Set('chart.gutter.top', 20);
-		progress1.Set('chart.gutter.bottom', 0);
-		progress1.Set('units.post', '');
-		progress1.Set('chart.text.color', 'rgba(255, 147, 0, 0)') // invisible text
-		progress1.Set('key', ['Away', 'Wake', 'Light sleep', 'REM', 'Deep sleep']);
-		progress1.Set('key.colors', ['rgba(44, 44, 44, 0.4)', 'rgba(255, 0, 0, 0.6)', 'rgba(0, 196, 255, 0.6)', 'rgba(0, 196, 36, 0.6)', 'rgba(0, 63, 255, 0.6)']);
-		//    progress1.Set('tickmarks.zerostart', true);
-		//    progress1.Set('bevel', true);        
-		progress1.Draw();
+	_init = function() {
+		parentDIVID = "#masonry-container";
+		var parentwidth = $(parentDIVID).width() / 2;
+		var HTML = $('<div id="bullet-chart-wrapper" style="width:' + parentwidth + 'px;" class="masonry-box"></div>');
+    $(parentDIVID).append(HTML).masonry('appended', HTML);
+		margin = {top: 5, right: parentwidth * 0.05, bottom: 20, left: 160},
+			width = parentwidth - margin.left - margin.right,
+			height = 50 - margin.top - margin.bottom;
+
+		chart = d3.bullet()
+				.width(width)
+				.height(height);
+		
+		amplify.subscribe('new_bullet_chart', function(data) {
+      console.log('new_bullet_chart', data);
+			_createBulletChart(data.id, data.chart);
+		});
+		
+		amplify.subscribe('update_bullet_chart', function(data) {
+      console.log('update_bullet_chart', data);
+			_updateBulletChart(data.id, data.chart);
+		});
 	}
 
-	_clearLineGraph = function(canvasid) {
-		var canvas  = document.getElementById(canvasid)
-		RGraph.Clear(canvas, 'white');
-		RGraph.Reset(canvas);
-		RGraph.ObjectRegistry.Clear(canvasid);
-	};
+  _createBulletChart = function(id, data) {
+    var HTML = $('<div class="bullet-chart"  style="width:' + $(parentDIVID).width() / 2 + 'px;" id="'+ id +'"></div>');
+    $('#bullet-chart-wrapper').append(HTML); //.masonry('appended', HTML);
+    
+    var svg = d3.select('#'+id).selectAll("svg")
+        .data([data])
+      .enter().insert("svg")
+        .attr("class", "bullet")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .insert("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+        .call(chart);
 
-	_graphs = [];
-	_drawGraphs = function() {
-		_clearLineGraph('heartlinegraph');
-		if($( "#checkbox-noise").is(':checked')) {
-			_drawBarGraph('heartlinegraph', sleepData.noisedata, 'rgba(0,255,0,0.4)', 'right', 'Noise', 140);
+    var title = svg.append("g")
+        .style("text-anchor", "end")
+        .attr("transform", "translate(-6," + height / 2 + ")");
+
+    title.append("text")
+        .attr("class", "title")
+        .text(function(d) { return d.title; });
+
+    title.append("text")
+        .attr("class", "subtitle")
+        .attr("dy", "1em")
+        .text(function(d) { return d.subtitle; });
+        
+    title.append("text")
+        .attr("class", "bulletvalue")
+        .attr("dy", "1.8em")
+        .attr("id", id + "-value")
+        .text(function(d) { 
+          return '' + data.valuetxt; 
+        });
+        
+    chart.duration((1 + Math.random()) * 1000); 
+    $('#masonry-container').masonry( 'reload' );
+  };
+  
+  _updateBulletChart = function(id, data) {
+    d3.select('#'+id).selectAll("svg") 
+        .data([data]) 
+        .call(chart); 
+
+    d3.selectAll(".title") 
+          .data(data) 
+          .attr("class", "title") 
+      .text(data.title) 
+          .text(function(data) { return data.title; }); 
+
+    d3.selectAll(".subtitle") 
+          .data(data) 
+      .attr("class", "subtitle") 
+      .attr("dy", "1em") 
+      .text(function(data) { return data.subtitle; });  
+      
+    d3.selectAll("#" + id + "-value")
+      .attr("class", "bulletvalue")
+      .attr("id", id + "-value")
+      .attr("dy", "1.8em") 
+      .text('' + data.valuetxt);  
+  };
+  
+  _remove = function(id) {
+    $('#'+id).remove();
+  };
+  
+  return {
+    createBulletChart: _createBulletChart,
+    updateBulletChart: _updateBulletChart,
+		init: _init
+  }
+}());
+
+highchartsUI = (function(highchartsUI) {
+	var _container = '#highchart';
+	
+	_createSeries = function(data) {
+    var d = Date.parse(data.pointStart)
+		return  {
+			'name': data.name,
+      'type': data.type,
+			'data': data.data, //_mapData(data.data),
+			'data.marker.enabled': false,
+			'pointStart': Date.UTC(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()),
+			'pointInterval': data.pointInterval
 		}
-		if($( "#checkbox-luminosity").is(':checked')) {
-			_drawBarGraph('heartlinegraph', sleepData.lightdata, 'rgba(0,0,255,0.4)', 'right', 'Luminosity', 220);
-		}
-		if($( "#checkbox-heartrate").is(':checked')) {
-			_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
-		}
-		_initLineGraph('heartlinegraph', 'Heart rate', sleepData.heartratedata);
-		_drawStages('sleepstagegraph', sleepData.stages);
 	};
-
-	_drawActivityGraph = function() {
-		_clearLineGraph('activitygraph');
-		var line = _initActivityLineGraph('activitygraph', 'Steps', activityData.dataset);	
-		if(activityData.activities != undefined) {
-			for(var i = 0; i < activityData.activities.length; i++) {
-				var a = activityData.activities[i];
-				if(a.hasStartTime == true) {
-					var name = a.name.split(' ');
-					name = name[0].split(',');
-					name = name[0];
-					_addMarker(a.startTime, line, 'activitygraph', a.name + " " + secondsToString(a.duration/1000), a.description, name.substring(0,6) + "...");
-				}
-			}
-		}
-	};
-
-	_drawBarGraph = function(canvasid, data, color, yaxispos, key, keyxpos) {
-		var tooltips = [];
-		for(var i = 0; i < data.length; i++) { tooltips.push(data[i] + ''); }
-		var bar = new RGraph.Bar(canvasid, data);
-		bar.Set('tooltips',tooltips);
-		bar.Set('colors', [color]);
-		bar.Set('hmargin', 0);
-		bar.Set('background.grid', false);
-		bar.Set('chart.yaxispos', yaxispos);
-		bar.Set('chart.ylabels.count', 3);
-		bar.Set('chart.scale.decimals', 0);
-		bar.Set('ylabels', false);
-		bar.Set('chart.noaxes', false);
-		bar.Set('chart.key', [key]);
-		bar.Set('chart.key.position.x', keyxpos);
-		bar.Set('chart.key.position', 'gutter');
-		bar.Set('chart.ymin', Math.max(0, Math.min.apply(null, data)));
-		bar.Set('chart.filled.accumulative', true);
-		bar.Draw();
-		_graphs.push(bar);
-//		RGraph.RedrawCanvas(bar.canvas);
-	};
-
-	_initActivityLineGraph = function(canvasid, title, data) {
-		var labelarray = [];
-		var starttime = new Date(2000, 1, 1, 0, 0, 0, 0); // 00:00:00
-		var endtime = new Date(2000, 1, 1, 23, 59, 59, 0); // 23:59:59:00
-		var temptime = new Date(starttime.getTime());
-		while(temptime <= endtime) {
-			if(temptime.getMinutes() == 0)
-				labelarray.push(temptime.getHours() + ":" + (temptime.getMinutes()<10?'0':'') + temptime.getMinutes());
-			else
-				labelarray.push('');
-			temptime = new Date(temptime.getTime() + 5*60*1000);
-		}
-		var dataPoints = [];
-		for(var i = 0; i < data.length; i++) { dataPoints.push(data[i].value); }
-		var tooltips = [];
-		for(var i = 0; i < dataPoints.length; i++) { tooltips.push(dataPoints[i] + ''); }
-		var canvas  = document.getElementById(canvasid)
-		var line = new RGraph.Line(
-			canvasid, dataPoints
-		);
-		line.Set('chart.curvy', true);
-		line.Set('background.grid', false);
-		line.Set('chart.linewidth', 3);
-		line.Set('chart.hmargin', 5);
-		line.Set('chart.labels', labelarray);
-		line.Set('chart.tooltips', tooltips);
-		line.Set('chart.ylabels.count', 3);
-		line.Set('chart.scale.decimals', 0);
-		line.Set('chart.shadow.blur', 15);
-		line.Set('chart.ymin', 0);
-		line.Set('chart.key', [ title + "" ]);
-		line.Set('chart.key.position.x', 40);
-		line.Set('chart.key.position', 'gutter');
-		line.Set('chart.outofbounds', true);
-		line.Draw();
-		_graphs.push(line);
-		return line;
-	};
-
-	_addMarker = function (time, line, canvasid, header, text, note) {
-		// Resolving X coordinate from time
-		var time = Date.parse(time);
-		if(time == null) return;
-		var timelineStartTime = Date.today();
-		var hours = time.getHours() - timelineStartTime.getHours();
-		var minutes = time.getMinutes() - timelineStartTime.getMinutes(); // round to nearest 5 minutes
-		var xCoord = hours * 12 + Math.round(minutes / 5);
-
-		// Add a notification just for test
-		var dataValue = line.original_data[0][xCoord];
-		console.log('Line value at marker ' + note +  ' point: ' + dataValue, line);
-		var marker1 = new RGraph.Drawing.Marker2(canvasid, line.coords[xCoord][0], line.coords[line.original_data[0][xCoord]][1], note);
-		marker1.Set('chart.tooltips', ['<b>' + header + '</b><br />' + text]);
-		marker1.Set('chart.highlight.fill', 'rgba(255,0,0,0.3)');
-		marker1.Set('chart.tooltips.event', 'onmousemove');
-		marker1.Set('chart.voffset', 50);
-		marker1.Set('chart.text.size', 10);
-		marker1.Set('chart.fillstyle', 'rgba(255,255,255,0.5)');
-		marker1.Draw();		
-	};
-
-
-	_initLineGraph = function(canvasid, title, data) {
-		var labelarray = [];
-
-/*
-		var starttime = new Date(); // Start time today
-		starttime.setHours(userData.data.night_start_time.split(':')[0]);
-		starttime.setMinutes(userData.data.night_start_time.split(':')[1]);
-		starttime.setSeconds(0);
-		starttime.setMilliseconds(0);
-		var endtime = new Date(starttime.getTime() + 24*60*60*1000); // End time tomorrow
-		endtime.setHours(userData.data.night_end_time.split(':')[0]);
-		endtime.setMinutes(userData.data.night_end_time.split(':')[1]);
-		endtime.setSeconds(0);
-		endtime.setMilliseconds(0);
-*/
-
-    var starttime = new Date(sleepData.localstarttime.getTime()); // Start time today
-    var endtime = new Date(sleepData.localendtime.getTime()); // End time tomorrow
-
-		var temptime = new Date(starttime.getTime());
-		console.log(starttime, endtime, temptime);
-		while(temptime <= endtime) {
-			if(temptime.getMinutes() == 0)
-				labelarray.push(temptime.getHours() + ":" + (temptime.getMinutes()<10?'0':'') + temptime.getMinutes());
-			else
-				labelarray.push('');
-			temptime = new Date(temptime.getTime() + 5*60*1000);
-		}
-//		console.log(labelarray, labelarray.length);
-
-		var mappedData = _mapData(data, starttime, endtime);
-		var tooltips = [];
-		for(var i = 0; i < mappedData.length; i++) { tooltips.push(mappedData[i] + ''); }
-		var canvas  = document.getElementById(canvasid)
-		var line = new RGraph.Line(
-			canvasid, mappedData
-		);
-		line.Set('chart.curvy', true);
-		line.Set('background.grid', false);
-		line.Set('chart.linewidth', 3);
-		line.Set('chart.hmargin', 5);
-		line.Set('chart.labels', labelarray);
-		line.Set('chart.tooltips', tooltips);
-		line.Set('chart.ylabels.count', 3);
-		line.Set('chart.scale.decimals', 0);
-		line.Set('chart.shadow.blur', 15);
-		line.Set('chart.ymin', Math.max(0, Math.min.apply(null, mappedData)));
-		line.Set('chart.key', [ title + "" ]);
-		line.Set('chart.key.position.x', 40);
-		line.Set('chart.key.position', 'gutter');
-		line.Set('chart.outofbounds', true);
-		line.Draw();
-		_graphs.push(line);
-	};
-
-	_mapData = function(data, starttime, endtime) {
-		// data should have data.time and data.value
+	
+	_mapData = function(data) {
+		var start = _options.start;
+		var end = _options.end;
 		var result = [];
-		var temptime = new Date(starttime.getTime());
-		var valuefound = false;
-		var lastfoundvalue = sleepData.heartrate;
-		while(temptime <= endtime) {
-			for(var i = 0; i < data.length; i++) {
-				var datatime = new Date(data[i].time);
-				datatime = new Date(datatime.getTime() - 2*60*60*1000);
-				datatime.setDate(temptime.getDate());
-				datatime.setMonth(temptime.getMonth());
-				datatime.setFullYear(temptime.getFullYear());
-				if(
-						Math.abs(datatime.getTime()-temptime.getTime()) <= 5*60*1000
-					) {
-					var value = Math.round(data[i].value * 100) / 100;
-					result.push(value);
-					lastfoundvalue = value;
-					valuefound = true;
-					break;
-				}
+		var i = 0;
+		try {
+			while(Date.parse(data[i][0]).isBefore(start)) i++;
+			for(var j = i; j < data.length; j++) {
+				if(Date.parse(data[j][0]).isAfter(end)) break;
+				result.push(data[j][1]);
 			}
-			if(valuefound == false) {
-				result.push(lastfoundvalue);
-			}
-			valuefound = false;
-			temptime = new Date(temptime.getTime() + 5*60*1000);
+		} catch(err) {
+			console.log("Time parsing error", data, err, i, j);
+			return [];
 		}
-//		console.log(result);
 		return result;
 	};
+	
+	_clear = function() {
+    var chart = $(_container).highcharts();
+    if(typeof(chart) == 'object') {
+      console.log('Removing highchart', chart.series.length);
+      //highchartsUI.chart().destroy();
+      for (var i = 0; i < chart.series.length; i++) {
+        chart.series[i].remove(true); //forces the chart to redraw
+      }
+      if(chart.series.length > 0) {
+        while(chart.series.length > 0) {
+          chart.series[0].remove(true); //forces the chart to redraw
+        }
+        chart.redraw();
+        console.log('Removing highchart complete', chart.series.length);
+      }
+    }
+	};
+		
+	var _options = {
+		'title': 'Wellness timeline', 
+		'subtitle': 'Activities, sleeping, etc...', 
+		'start': Date.today().clearTime().add(-1).days(),
+		'end': Date.today().clearTime().add(1).days(),
+		'yAxisTitle':'',
+		'initSeries':[{'name':'foo', 'data': [1,2,3,4,5,6], 'type':'spline'},]
+	}
+	
+	_init = function(options) {
+		if(typeof(options) != 'undefined')	_options = options;
+		$(_container).highcharts({
+				chart: {
+						type: 'spline',
+						height: 400,
+						zoomType: 'x'
+				},
+				title: {
+						text: _options.title
+				},
+				subtitle: {
+						text: _options.subtitle
+				},
+				xAxis: {
+          type: "datetime",    
+          dateTimeLabelFormats: {
+              day: '%H:%M'
+          },
+          //tickInterval: 3600 * 1000,
+          tickPixelInterval: 50
+        },
+				yAxis: {
+						min: 0,
+						title: {
+								text: _options.yAxisTitle
+						}
+				},
+				plotOptions: {
+            line: {
+                lineWidth: 2,
+                states: {
+                    hover: {
+                        lineWidth: 4
+                    }
+                },
+                marker: {
+                    enabled: false,
+                    states: {
+                        hover: {
+                            enabled: true
+                        }
+                    }
+                }
+            },
+            spline: {
+                lineWidth: 2,
+                states: {
+                    hover: {
+                        lineWidth: 4
+                    }
+                },
+                marker: {
+                    enabled: false,
+                    states: {
+                        hover: {
+                            enabled: true
+                        }
+                    }
+                }
+            },
+            area: {
+                lineWidth: 2,
+                states: {
+                    hover: {
+                        lineWidth: 4
+                    }
+                },
+                marker: {
+                    enabled: false,
+                    states: {
+                        hover: {
+                            enabled: true
+                        }
+                    }
+                }
+            }
+        },
+				tooltip: {
+						headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+						pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+								'<td style="padding:0"><b>{point.y:.1f}</b></td></tr>',
+						footerFormat: '</table>',
+						shared: true,
+						useHTML: true
+				},
+				series: _options.initSeries
+		});
+	};
+	
+	_chart = function() {
+		return $(_container).highcharts();
+	}
+
+	amplify.subscribe('new_timeline_dataset', function(data) {
+		console.log('new_timeline_dataset', data);
+		var series = _createSeries(data);
+		console.log('new series', series);
+		_chart().addSeries(series, false);
+		_chart().redraw();
+	});
 
 	return {
-		clearLineGraph: _clearLineGraph,
-		drawGraphs: _drawGraphs,
-		drawActivityGraph: _drawActivityGraph,
-		addMarker: _addMarker
+		init: _init,
+		chart: _chart,
+    clear: _clear
 	}
 }());
 
-
-var gaugeUI = (function(graphUI) {
-	_setGaugeValue = function(gauge, maxvalue, value) {
-		gauge.refresh(value);
-		if(gauge.convert === true)
-			gauge.txtTitle[0].textContent = secondsToString(value) + gauge.unittxt;
-		else
-			gauge.txtTitle[0].textContent = value + gauge.unittxt;
-		console.log(value, gauge.txtTitle[0].textContent);
+var weatherUI = (function(weatherUI) {
+	_init = function() {
+		amplify.subscribe('weather_history', function(data) {
+			var summary = data.history.dailysummary[0];
+			console.log('Weather data for ' + summary.date.pretty, summary);
+			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+			var weekday = weekdays[Date.parse(data.history.date.pretty).getDay()];
+			var HTML = $('<div class="masonry-box weather_variables" id="weather_variables_'+ weekday +'"><b>Weather conditions (' + weekday + ')</b></br>' +
+        '<table><tr><td class="weatherdata_name">Temperature</td><td class="weatherdata_value">' + summary.meantempm + ' C</td><td><span id="temperature_sparkline_' + weekday + '"></span></td></tr>' +
+        '<tr><td class="weatherdata_name">Dew P.T.</td><td class="weatherdata_value">' + summary.meandewptm + ' C</td><td><span id="dewptm_sparkline_' + weekday + '"></span></td></tr>' + 
+        '<tr><td class="weatherdata_name">Pressure</td><td class="weatherdata_value">' + summary.meanpressurem + ' hPa</td><td><span id="pressure_sparkline_' + weekday + '"></span></td></tr>' + 
+        '<tr><td class="weatherdata_name">Humidity</td><td class="weatherdata_value">' + summary.humidity + ' %</td><td><span id="humidity_sparkline_' + weekday + '"></span></td></tr></table>' +
+        '</div>');
+			$("#masonry-container").append(HTML).masonry('appended', HTML);
+      var o = data.history.observations;
+      var temperature_sparkline = [];
+      var pressure_sparkline = [];
+      var humidity_sparkline = [];
+      var dewptm_sparkline = [];
+      for(var i = 0; i < o.length; i++) {
+        temperature_sparkline.push(o[i].tempm);
+        pressure_sparkline.push(o[i].pressurem);
+        humidity_sparkline.push(o[i].hum);
+        dewptm_sparkline.push(o[i].dewptm);
+      }
+      $('#temperature_sparkline_' + weekday).sparkline(temperature_sparkline, {width:'100px'});
+      $('#pressure_sparkline_' + weekday).sparkline(pressure_sparkline, {width:'100px'});
+      $('#humidity_sparkline_' + weekday).sparkline(humidity_sparkline, {width:'100px'});
+      $('#dewptm_sparkline_' + weekday).sparkline(dewptm_sparkline, {width:'100px'});
+      $('#masonry-container').masonry( 'reload' );
+		});
 	};
+	return {
+		init: _init
+	}
+}());
 
-	var _gauges = [];	
-	_initSleepGauges = function() {
-		_gauges.push(_initGauge('deepsleep', 'deepsleeptext', 'good', Math.max(sleepData.deepgoal, sleepData.deep) + 600, sleepData.deep, true, ''));
-		_gauges.push(_initGauge('totalsleep', 'totalsleeptext', 'good', Math.max(sleepData.totalgoal, sleepData.total) + 600, sleepData.total, true, ''));
-		_gauges.push(_initGauge('efficiency', 'efficiencytext', 'good', Math.max(100, sleepData.efficiency), sleepData.efficiency, false, ' %'));
-		_gauges.push(_initGauge('timeawake', 'timeawaketext', 'bad', Math.max(5100, sleepData.timeawake()) + 600, sleepData.timeawake(), true, ''));
-		_gauges.push(_initGauge('heartrate', 'heartratetext', 'neutral', Math.max(sleepData.heartrate, 80), sleepData.heartrate, false, ' BPM'));
-		_gauges.push(_initGauge('noise', 'noisetext', 'bad', Math.max(sleepData.noise(), 120), sleepData.noise(), false, ' db'));
+var weatherAPI = (function(weatherAPI) {
+	var baseurl = 'http://ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:8080/';
+	_weatherHistoryCB = function(data) {
+		amplify.publish('weather_history', data);
 	};
-
-	var _activityGauges = [];
-	_initActivityGauges = function() {
-		_activityGauges.push(_initGauge('calories', 'null', 'good', activityData.goals.caloriesOut, activityData.summary.activityCalories, false, ''));
-		_activityGauges.push(_initGauge('activityscore', 'null', 'good', activityData.goals.activeScore, activityData.summary.activeScore, false, ''));
-		_activityGauges.push(_initGauge('steps', 'null', 'good', activityData.goals.steps, activityData.summary.steps, false, ''));
-	};
-
-	var _withingsGauges = [];
-	_initWithingsGauges = function() {
-		_withingsGauges.push(_initGauge('sysbloodpressure', 'null', 'neutral', withingsData.goals.sysbloodpressure, withingsData.values.sysbloodpressure, false, 'mmHg'));
-		_withingsGauges.push(_initGauge('diasbloodpressure', 'null', 'neutral', withingsData.goals.diasbloodpressure, withingsData.values.diasbloodpressure, false, 'mmHg'));
-		_withingsGauges.push(_initGauge('weight', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, 'kg'));
-		_withingsGauges.push(_initGauge('withingspulse', 'null', 'neutral', withingsData.goals.weight, withingsData.values.weight, false, 'bpm'));
-	};
-
-	_setGaugesToZero = function() {
-		for(var i = 0; i < _gauges.length; i++) {
-			_setGaugeValue(_gauges[i], _gauges[i].maxvalue, 0);
+	_getWeatherHistory = function(address, date) {
+		// First we check the services available for the user
+		var day = ("0" + date.getDate()).slice(-2);
+		var month = ("0" + (date.getMonth() + 1)).slice(-2);
+		var apicall = 'history?address=' + address + '&year=' + date.getFullYear() + '&day=' + day + '&month=' + month;
+		var myurl = baseurl + apicall;
+		var cacheValue = amplify.store(myurl);
+		if(typeof(cacheValue) != 'undefined') {
+			console.log("Found from local store " + myurl, cacheValue);
+			_weatherHistoryCB(cacheValue);
+		} else {
+			$.getJSON(myurl,
+				function(data) {
+					amplify.store(myurl, data, { expires: 12*60*(60*1000*Math.random()) });
+					_weatherHistoryCB(data);
+				}
+			);		
 		}
 	};
-
-	// For justGage
-	_initGauge = function(canvas, textfield, type, maxvalue, gaugevalue, gaugeconversion, unittxt) {
-    var colorset = {
-      good: ['#B40404', '#DF3A01',  '#C8FE2E', '#31B404' ],
-      neutral: ['#00BFFF', '#0174DF', '#0431B4', '#08088A'],
-      bad: ['#31B404', '#C8FE2E', '#DF3A01', '#B40404']
-    };
-
-    var colors;
-    switch(type) {
-      case 'good':
-        colors = colorset.good;
-        break;
-      case 'bad':
-        colors = colorset.bad;
-        break;
-      default:
-        colors = colorset.neutral;
-        break;
-    }
-		
-		JustGage.prototype.convert = false;
-		var g = new JustGage({
-			id: canvas, 
-			value: gaugevalue,
-			showMinMax: false,
-			min: 0,
-			max: maxvalue,
-			levelColors: colors,
-			levelColorsGradient: false,
-			startAnimationType: "bounce",
-			refreshAnimationType: "bounce",
-			showInnerShadow: true,
-			gaugeWidthScale: 0.5,
-			title: "foo"
-	  }); 
-		g.convert = gaugeconversion;
-		g.unittxt = ' ' + unittxt;
-		return g;
-	};
-
 	return {
-		initSleepGauges: _initSleepGauges,
-		initActivityGauges: _initActivityGauges,
-		initWithingsGauges: _initWithingsGauges,
-		gauges: _gauges,
-		activityGauges: _activityGauges,
-		withingsGauges: _withingsGauges,
-		setGaugeValue: _setGaugeValue
+		getWeatherHistory: _getWeatherHistory
 	}
 }());
 
 var wellnessAPI =(function(wellnessAPI) {
 	var baseurl = 'https://wellness.cs.tut.fi/';
-
+  var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 	_sleepCB = function(data) {
+    $('.sleep_variables').remove();
 		var json = $.parseJSON(data);
 		for(var i = 0; i < json.data.length; i++) {
 			var data = json.data[i];
@@ -498,107 +478,187 @@ var wellnessAPI =(function(wellnessAPI) {
 			}
 			if(data.analysis_valid == false) {
 				console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), data);
-				_setGaugesToZero(); // TODO: ei vaikuta toimivan
-				graphUI.clearLineGraph('heartlinegraph');
-				graphUI.clearLineGraph('sleepstagegraph');
 				return;
 			} else {
 				console.log('Valid Beddit analysis available on ' + data.date, data);
 			}
-			sleepData.total = data.time_sleeping;
-			sleepData.deep = data.time_deep_sleep;
-			sleepData.timeinbed = data.time_in_bed;
-			sleepData.efficiency = Math.round(data.sleep_efficiency * 100) / 100;
-			sleepData.heartrate = Math.round(data.resting_heartrate * 100) / 100;
-			sleepData.stages = data.sleep_stages;
-			sleepData.date = new Date(data.date);
-			sleepData.localstarttime = new Date(data.local_start_time); // - 2*60*60*1000);
-			sleepData.localendtime = new Date(data.local_end_time); // - 2*60*60*1000);
+						
+			var daynumber = Date.parse(data.date).getDay(); 
+			console.log('Publishing sleep data ', daynumber, weekdays[daynumber], i, json.data.length)
+			amplify.publish('new_timeline_dataset',
+        {'name':'Noise (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.noise_measurements[0][0]),'data':data.noise_measurements,'type':'area'});
+			amplify.publish('new_timeline_dataset',
+        {'name':'Luminosity (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.luminosity_measurements[0][0]),'data':data.luminosity_measurements,'type':'area'});
+			amplify.publish('new_timeline_dataset',
+        {'name':'Heart rate (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.averaged_heart_rate_curve[0][0]),'data':data.averaged_heart_rate_curve,'type':'spline'});
 
-			gaugeUI.setGaugeValue(gaugeUI.gauges[0], Math.max(sleepData.deepgoal, sleepData.deep), sleepData.deep);
-			gaugeUI.setGaugeValue(gaugeUI.gauges[1], Math.max(sleepData.totalgoal, sleepData.total), sleepData.total);
-			gaugeUI.setGaugeValue(gaugeUI.gauges[2], Math.max(100, sleepData.efficiency), sleepData.efficiency);
-			gaugeUI.setGaugeValue(gaugeUI.gauges[3], Math.max(5100, sleepData.timeawake()), sleepData.timeawake());
-			gaugeUI.setGaugeValue(gaugeUI.gauges[4], Math.max(sleepData.heartrate, 80), sleepData.heartrate);
+//			amplify.publish('new_timeline_dataset',
+//        {'name':'Temperature (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.temperature_measurements[0][0]),'data':data.temperature_measurements,'type':'line'});
 
-			sleepData.heartratedata = [];
-			for(var i = 0; i < data.averaged_heart_rate_curve.length; i++) {
-				if(data.averaged_heart_rate_curve[i][1] != null) {
-					sleepData.heartratedata.push(
-						{
-							'time'  : data.averaged_heart_rate_curve[i][0],
-							'value' : data.averaged_heart_rate_curve[i][1] 
-						}
-					);
-				}
-				else {
-					sleepData.heartratedata.push(
-						{
-							'time'  : data.averaged_heart_rate_curve[i][0],
-							'value' : data.resting_heartrate
-						}
-					);
-				}	
-			}
-
-			sleepData.noisedata = [];
-			for(var i = 0; i < data.noise_measurements.length; i++) {
-				sleepData.noisedata.push(parseInt(data.noise_measurements[i][1]));
-			}
-			gaugeUI.setGaugeValue(gaugeUI.gauges[5], Math.max(sleepData.noise(), 80), sleepData.noise());
-
-			sleepData.lightdata = [];
-			for(var i = 0; i < data.luminosity_measurements.length; i++) {
-				sleepData.lightdata.push(parseInt(data.luminosity_measurements[i][1]));
-			}
-			
-			graphUI.drawGraphs();
+//			var value = Math.round(data.sleep_efficiency * 100) / 100;
+//			amplify.publish('update_bullet_chart', 
+//        { 'id':'sleep_efficiency', 'chart': {"title":"Sleep efficiency","subtitle":"percent","ranges":[70,80,90],"measures":[value],"markers":[100],"valuetxt":value}}
+//      );
+      
+      var HTML = $('<div class="masonry-box sleep_variables" id="sleep_variables_' + i + '">' +
+        '<b>Sleep variables (' + weekdays[daynumber] + ')</b></br>' +
+        '<table id="sleepdata_table_' + i + '"></table></div>');
+      $('#masonry-container').append(HTML).masonry('appended', HTML);
+      
+      $('#sleepdata_table_' + i ).append(
+        '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(data.sleep_efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_efficiency_sparkline_' + i + '">Loading..</span>--></td></tr>' +
+        '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_sleeping) + '</td><td class="sleepdata_unit">hours</td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">Loading..</span></td></tr>' +
+        '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_deep_sleep) + '</td><td class="sleepdata_unit">hours</td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+        '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_light_sleep) + '</td><td class="sleepdata_unit">hours</td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+        '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(data.time_in_bed) + '</td><td class="sleepdata_unit">hours</td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">Loading..</span></td></tr>' +
+        '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(data.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
+        '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + data.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>'
+      );
+	  
+//      $('#sleep_efficiency_sparkline_' + i).sparkline(temperature_sparkline, {'type': 'pie', 'width':'100px'});
+      $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(data.time_sleeping/3600 * 100) / 100],[Math.round(data.time_deep_sleep/3600 * 100) / 100],[ Math.round(data.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+//      $('#sleep_time_deep_sparkline_' + i).sparkline(humidity_sparkline, {'type': 'pie', width:'100px'});	  
+//      $('#sleep_time_light_sparkline_' + i).sparkline(humidity_sparkline, {'type': 'pie', width:'100px'});	  
+      $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(data.time_in_bed/3600 * 100) / 100, Math.round((data.time_in_bed-data.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
+//      $('#sleep_stress_sparkline_' + i).sparkline(humidity_sparkline, {'type': 'pie', width:'100px'});	  
+      
+      $('#masonry-container').masonry( 'reload' );
 		}
 	};
 
 	_withingsCB = function(data) {
 		var json = $.parseJSON(data);
+		
 		if(json.data[0].latest.weight != undefined) {
-			withingsData.values.weight = Math.round(json.data[0].latest.weight.value * 10) / 10;
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[2], withingsData.goals.weight, withingsData.values.weight);
+      var value = Math.round(json.data[0].latest.weight.value * 10) / 10;
+      var gaugesettings = 
+        {'targetDIVid':'#masonry-container',
+         'data':{'value':value,'valueSuffix':' kg'}, 
+         'options':{'id':'weight','name':'Weight','min':0,'max':value*1.4, 
+            'bands':  [{    
+                            'from': 0,
+                            'to': value*1.1,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#55BF3B' // green
+                        }, {
+                            'from': value*1.1,
+                            'to': value*1.2,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DDDF0D' // yellow
+                        }, {
+                            'from': value*1.2,
+                            'to': value*1.4,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DF5353' // red
+                        }]        
+	        }
+        };
+      amplify.publish('new_gauge', gaugesettings);
 		}
 		else {
 			console.log("There is no Withings weight data available", json);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[2], withingsData.weightgoal, 0);
 		}
 		if(json.data[0].latest.sysPressure != undefined) {
-			withingsData.values.sysbloodpressure = json.data[0].latest.sysPressure.value;
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.goals.sysbloodpressure, withingsData.values.sysbloodpressure);
+      value = Math.round(json.data[0].latest.sysPressure.value * 10) / 10;
+      var gaugesettings = 
+        {'targetDIVid':'#masonry-container',
+         'data':{'value':value,'valueSuffix':' mmHg'}, 
+         'options':{'id':'sysp','name':'SBP','min':0,'max':180, 
+            'bands':  [{    
+                            'from': 0,
+                            'to': 90,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DDDF0D' // yellow
+                        },
+                        {    
+                            'from': 90,
+                            'to': 120,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#55BF3B' // green
+                        }, {
+                            'from': 120,
+                            'to': 140,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DDDF0D' // yellow
+                        }, {
+                            'from': 140,
+                            'to': 180,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DF5353' // red
+                        }]        
+	        }
+        };
+      amplify.publish('new_gauge', gaugesettings);
 		}
 		else {
 			console.log("There is no Withings systolic pressure available", json);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[0], withingsData.goals.sysbloodpressure, 0);
 		}
 		if(json.data[0].latest.diasPressure != undefined) {
-			withingsData.values.diasbloodpressure = json.data[0].latest.diasPressure.value;
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.goals.diasbloodpressure, withingsData.values.diasbloodpressure);
+      value = Math.round(json.data[0].latest.diasPressure.value * 10) / 10;
+      var gaugesettings = 
+        {'targetDIVid':'#masonry-container',
+         'data':{'value':value,'valueSuffix':' mmHg'}, 
+         'options':{'id':'diap','name':'DBP','min':0,'max':110, 
+            'bands':  [{    
+                            'from': 0,
+                            'to': 60,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DDDF0D' // yellow
+                        },
+                        {    
+                            'from': 60,
+                            'to': 80,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#55BF3B' // green
+                        }, {
+                            'from': 80,
+                            'to': 100,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DDDF0D' // yellow
+                        }, {
+                            'from': 100,
+                            'to': 110,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#DF5353' // red
+                        }]        
+	        }
+        };
+      amplify.publish('new_gauge', gaugesettings);
 		}
 		else {
 			console.log("There is no Withings diastolic pressure available", json);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[1], withingsData.goals.diasbloodpressure, 0);
 		}
-		if(json.data[0].latest.pulse != undefined) {
-			withingsData.values.pulse = json.data[0].latest.pulse.value;
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[3], withingsData.goals.pulse, withingsData.values.pulse);
+		if(json.data[0].latest.pulse != undefined) {    
+      value = Math.round(json.data[0].latest.pulse.value * 10) / 10;
+      var gaugesettings = 
+        {'targetDIVid':'#masonry-container',
+         'data':{'value':value,'valueSuffix':' bpm'}, 
+         'options':{'id':'pulse','name':'Pulse','min':0,'max':160, 
+            'bands':  [{    
+                            'from': 0,
+                            'to': 160,
+                            'innerRadius': '96%',
+                            'outerRadius': '100%',
+                            'color': '#0099FF' // blue
+                        }]        
+	        }
+        };
+      amplify.publish('new_gauge', gaugesettings);
 		}
 		else {
 			console.log("There is no Withings pulse available", json);
-			gaugeUI.setGaugeValue(gaugeUI.withingsGauges[3], withingsData.goals.pulse, 0);
 		}
-	};
-
-	_fitbitSummaryCB = function(data) {
-		var json = $.parseJSON(data);
-		activityData.goals = json.goals;
-		activityData.summary = json.summary;
-		gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
-		gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
-		gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, activityData.summary.steps);
 	};
 
 	_getData = function(apicall, cb) {
@@ -611,7 +671,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	    	headers: {
 	        "Authorization": userData.credentials
    			}
-			} 
+			}
 		).done(cb);
 	};
 	
@@ -621,12 +681,9 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 
 	_getSleepData =	function() {
-		// Beddit night is the date that begins during the night -> date + 1
-		var tomorrow = _currentday.clone().add(1).day();
-		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (tomorrow.getDate());
-		graphUI.clearLineGraph('heartlinegraph');
-		graphUI.clearLineGraph('sleepstagegraph');
-		_getData('api/unify/sleep/' + daypath + '/days/1/', _sleepCB);
+		// We should get yesterdays and tomorrows data
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		_getData('api/unify/sleep/' + daypath + '/days/2/', _sleepCB);
 	};
 
 	_getFitbitSummaryData =	function() {
@@ -636,29 +693,62 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	_getFitbitActivityDataset =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		graphUI.clearLineGraph('activitygraph');
 		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
 			var json = $.parseJSON(data);
+
 			if(json.data[0].activities != undefined) {
-				activityData.activities = json.data[0].activities;
+				console.log("TODO: Handle activities");
 			} else {
 				console.log("No activities data available on " + daypath, json);
 			}
 			if(json.data[0].goals != undefined && json.data[0].summary != undefined) {
-				activityData.goals = json.data[0].goals;
-				activityData.summary = json.data[0].summary;
-				gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, activityData.summary.activityCalories);
-				gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, activityData.summary.activeScore);
-				gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, activityData.summary.steps);
+
+				// Publishing the values
+				amplify.publish('activity_floors', { 'value' : json.data[0].summary.floors, 'goal' : json.data[0].goals.floors })
+        amplify.publish('activity_calories', { 'value' : json.data[0].summary.activityCalories, 'goal' : json.data[0].goals.caloriesOut });
+        amplify.publish('activity_steps', { 'value' : json.data[0].summary.steps, 'goal' : json.data[0].goals.steps });
+        amplify.publish('activity_score', { 'value' : json.data[0].summary.activeScore, 'goal' : json.data[0].goals.activeScore });
+        
+        goal = (json.data[0].goals.caloriesOut) / 1000;
+        value = (json.data[0].summary.activityCalories) / 1000;
+        var burnedcaloriesdata = {"title":"Calories burned","subtitle":"count in thousands","ranges":[goal*0.44,goal*0.75,goal*0.95],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
+        amplify.publish('update_bullet_chart', 
+          { 'id':'burnedcalories', 'chart': burnedcaloriesdata }
+        );
+        var goal, value;
+        goal = (json.data[0].goals.steps) /1000;
+        value = (json.data[0].summary.steps) / 1000;
+        var stepsdata = {"title":"Steps taken","subtitle":"count in thousands","ranges":[goal*0.35,goal*0.65,goal*0.85],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
+        amplify.publish('update_bullet_chart', 
+          { 'id':'steps', 'chart': stepsdata}
+        );
+        goal = (json.data[0].goals.floors);
+        value = (json.data[0].summary.floors);
+        var floorsdata = {"title":"Floors climbed","subtitle":"count","ranges":[goal*0.35,goal*0.65,goal*0.85],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
+        amplify.publish('update_bullet_chart', 
+          { 'id':'floors', 'chart': floorsdata}
+        );
+        goal = (json.data[0].goals.activeScore) / 100;
+        value = (json.data[0].summary.activeScore) / 100;
+        var activityscoredata = {"title":"Activity score","subtitle":"count in hundreds","ranges":[goal*0.35,goal*0.65,goal*0.85],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
+        amplify.publish('update_bullet_chart', 
+          { 'id':'activityscore', 'chart': activityscoredata}
+        );
+
 			} else {
 				console.log("No activity goals / summary available on " + daypath, json);
-				gaugeUI.setGaugeValue(gaugeUI.activityGauges[0], activityData.goals.caloriesOut, 0);
-				gaugeUI.setGaugeValue(gaugeUI.activityGauges[1], activityData.goals.activeScore, 0);
-				gaugeUI.setGaugeValue(gaugeUI.activityGauges[2], activityData.goals.steps, 0);
 			}
 			if(json.data[0].steps != undefined) {
-				activityData.dataset = json.data[0].steps.dataset;
-				graphUI.drawActivityGraph();
+        var mySteps = [];
+        for(var i = 1; i < json.data[0].steps.length - 1; i++) {
+          if(json.data[0].steps[i-1][1] === 0 && json.data[0].steps[i][1] === 0 && json.data[0].steps[i+1][1] === 0)
+            mySteps.push([json.data[0].steps[i][0], null]);
+          else
+            mySteps.push(json.data[0].steps[i]);
+        }
+				amplify.publish('new_timeline_dataset',
+          {'name':'Steps','type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
+        );
 			} else {
 				console.log("No detailed activity data available on " + daypath, json);
 			}
@@ -681,73 +771,95 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 	};
 
+	_disableLoginDialog = function() {
+			$( "#username" ).textinput( "disable" );
+			$( "#password" ).textinput( "disable" );
+			$( "#login-btn" ).button( "disable" );
+	};
+
 	var _today = Date.today();
 	_init = function() {
 		_currentday = new Date(_today.addDays(-1));
+		$("#dateselect").css({"visibility":"visible"});
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
+		$('#masonry-container').masonry({
+      itemSelector: '.masonry-box',
+      columnWidth: $('#masonry-container').width() / 36,
+      isAnimated: true,
+      animationOptions: {
+        duration: 400
+      }
+    });
+		bulletChartUI.init();
+		weatherUI.init();
+		weatherAPI.getWeatherHistory(userData.address, _currentday);
+		if(!Date.equals(Date.today(), _currentday.clone().clearTime()))
+      weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
 		if(userData.beddit) {
-/*
-			var apicall = 'beddit/api/user/' + userData.username + '/';
-			var myurl = baseurl + apicall;
-			$.ajax(
-				{
-					url: myurl,
-		    	type: 'GET',
-					datatype: 'json',
-		    	headers: {
-		        "Authorization": userData.credentials
-    			}
-				} 
-			).done(
-				function(data) {
-					var json = $.parseJSON(data);
-					if(json.status == "ok" && json.code == 200) {
-						userData.data = json.data;
-						$("#usertext").text(userData.data.first_name + "'s health dashboard. ");
 
-			     	_getSleepData();
+//      amplify.publish('new_bullet_chart', 
+//        { 'id':'sleep_efficiency', 'chart': {"title":"Sleep efficiency","subtitle":"percent","ranges":[70,80,90],"measures":[0],"markers":[100],"valuetxt":0} }
+//      );
 
-					} else {
-						console.log("Beddit user data failed" + apicall);
-					}
-				}
-			);
-*/
      	_getSleepData();
-     	resizeCanvas('heartlinegraph');
-    	resizeCanvas('sleepstagegraph', 40);
- 			gaugeUI.initSleepGauges();
 			$("#beddit").css({"visibility":"visible"});
 		} 
 		else {
 			$("#beddit").css({"display":"none"});
 		}
 		if(userData.fitbit) {
-			gaugeUI.initActivityGauges();
-//			_getFitbitSummaryData();
 			_getFitbitActivityDataset();
-     	resizeCanvas('activitygraph');
 			$("#fitbit").css({"visibility":"visible"});
+
+      amplify.publish('new_bullet_chart', 
+        { 'id':'burnedcalories', 'chart': {"title":"Calories burned","subtitle":"count in thousands","ranges":[0.96096,1.6380000000000001,2.0748],"measures":[1.205],"markers":[2.184],"valuetxt":1.205} }
+      );			
+      amplify.publish('new_bullet_chart', 
+        { 'id':'steps', 'chart': {"title":"Steps taken","subtitle":"count in thousands","ranges":[4,6,8],"measures":[0],"markers":[10],"valuetxt":0} }
+      );
+      amplify.publish('new_bullet_chart', 
+        { 'id':'floors', 'chart': {"title":"Floors climbed","subtitle":"count","ranges":[4,6,8],"measures":[0],"markers":[10],"valuetxt":0} }
+      );
+      amplify.publish('new_bullet_chart', 
+        { 'id':'activityscore', 'chart': {"title":"Activity score","subtitle":"count in hundreds","ranges":[4,6,8],"measures":[0],"markers":[10],"valuetxt":0} }
+      );
+
 		}
 		else {
 			$("#fitbit").css({"display":"none"});
 		}
 		if(userData.withings) {
-			gaugeUI.initWithingsGauges();
 			_getWeightData();
 			$("#withings").css({"visibility":"visible"});
+			gaugeUI.init();
 		}
 		else {
 			$("#withings").css({"display":"none"});
+		}
+		if(userData.fitbit || userData.beddit) {
+      var options = {
+				'title': 'Wellness timeline', 
+				'subtitle': 'Activities, sleeping, etc...', 
+				'start': _currentday.clone().clearTime().add({days:-1,hours:-3}),
+				'end': _currentday.clone().clearTime().add({days:1,hours:6}),
+				'yAxisTitle':'',
+				'initSeries': [
+					{'type':'line','name':'Heart rate','data': [["2013-03-26T06:20:00", 0], ["2013-03-26T06:25:00", 0], ["2013-03-26T06:30:00", 0]]}
+				]
+			};
+			highchartsUI.init(options);
+			highchartsUI.clear();
 		}
 	};
 
 	_refreshData = function() {
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
-
+		if(userData.fitbit || userData.beddit) {
+      highchartsUI.clear();
+		}
 		if(userData.beddit) {
      	_getSleepData();
 		}
@@ -759,7 +871,11 @@ var wellnessAPI =(function(wellnessAPI) {
 		if(userData.fitbit) {
 			_getFitbitActivityDataset();
 		}
-	
+
+    $("div[id*=weather_variables]").remove();
+		weatherAPI.getWeatherHistory(userData.address, _currentday);
+		if(!Date.equals(Date.today(), _currentday.clone().clearTime()))
+      weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
 	};
 
 	var _currentday;
@@ -776,7 +892,6 @@ var wellnessAPI =(function(wellnessAPI) {
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
 		_refreshData();
-		//	wellnessAPI.getData('beddit/api/user/' + userData.username + '/' + daypath + '/sleep/');	
 	};
 
 	return {
@@ -801,12 +916,17 @@ var wellnessAPI =(function(wellnessAPI) {
 					datatype: 'json',
 		    	headers: {
 		        "Authorization": credentials
-    			}
+    			},
+					statusCode: {
+						401: function() {
+							alert("Login failed");
+						}
+					}
 				} 
 			).done(
 				function(data) {
 					var json = $.parseJSON(data);
-					if(json.status == "ok" && json.code == 200) {
+					if(json.user_info.username) {
             userData.services = json.services_linked;
 						if(json.services_linked.indexOf('beddit') != -1) {
 	            userData.beddit = true;
@@ -820,10 +940,12 @@ var wellnessAPI =(function(wellnessAPI) {
 						// Login successfull
 						userData.username = username;
 						userData.credentials = credentials;
-						$("#login-msg").text(" Hi " + userData.username + ", login successful. ");
-						$("#usertext").text(userData.username + "'s wellness dashboard");
+						if(typeof(json.user_info.city) != undefined) userData.address = json.user_info.city;
+						$("#login-msg").text(" Hi " + json.user_info.username + ", login successful.");
+						$("#usertext").text(json.user_info.firstName + "'s wellness dashboard");
 						$("div.login").hide(1000);
 						$( "#password-dialog" ).popup( "close" );
+						_disableLoginDialog();
 
 						_init();
 					} else {
@@ -994,98 +1116,15 @@ secondsToString = function(sec) {
 	return hr + min + ':' + sec;
 };
   
-// Gauge UI with gauge.js
-var gaugeUI_gauge_js = (function(graphUI) {
-	// for gauge.js
-	setGaugeValue = function(gauge, maxvalue, value) {
-		gauge.set(value); 					// set actual value		
-		gauge.maxValue = maxvalue; 	// set max gauge value
-	};
 
-	var _gauges = [];
-	_initGauges = function() {
-		_gauges.push(initGauge('deepsleep', 'deepsleeptext', 'good', Math.max(sleepData.deepgoal, sleepData.deep) + 600, sleepData.deep, true, ''));
-		_gauges.push(initGauge('totalsleep', 'totalsleeptext', 'good', Math.max(sleepData.totalgoal, sleepData.total) + 600, sleepData.total, true, ''));
-		_gauges.push(initGauge('efficiency', 'efficiencytext', 'good', Math.max(100, sleepData.efficiency), sleepData.efficiency, false, ' %'));
-		_gauges.push(initGauge('timeawake', 'timeawaketext', 'bad', Math.max(5100, sleepData.timeawake()) + 600, sleepData.timeawake(), true, ''));
-		_gauges.push(initGauge('heartrate', 'heartratetext', 'neutral', Math.max(sleepData.heartrate, 80), sleepData.heartrate, false, ' BPM'));
-		_gauges.push(initGauge('noise', 'noisetext', 'bad', Math.max(sleepData.noise(), 120), sleepData.noise(), false, ' db'));
-	};
-
-	_setGaugesToZero = function() {
-		for(var i = 0; i < _gauges.length; i++) {
-			setGaugeValue(_gauges[i], _gauges[i].maxvalue, 0);
-		}
-	};
-
-	// For gauge.js
-	initGauge = function(canvas, textfield, type, maxvalue, value) {
-		var colors = {
-			good: ['#FF0000', '#00FF00' ],
-			neutral: ['#66FFFF','#2B87FF'],
-			bad: ['#00FF00','#FF0000']
-		};
-
-		var color1, color2;
-		switch(type) {
-			case 'good':
-				color1 = colors.good[0];
-				color2 = colors.good[1];
-				break;
-			case 'bad':
-				color1 = colors.bad[0];
-				color2 = colors.bad[1];
-				break;
-			default:
-				color1 = colors.neutral[0];
-				color2 = colors.neutral[1];
-				break;
-		}
-
-		var opts = {
-			lines: 12, 					// The number of lines to draw
-			angle: 0.15, 				// The length of each line
-			lineWidth: 0.20, 		// The line thickness
-			fontSize: 30,
-			pointer: {
-				length: 0.6, 				// The radius of the inner circle
-				strokeWidth: 0.035, // The rotation offset
-				color: '#000000' 		// Fill color
-			},	
-			percentColors : [
-							[ 0.0, "#a9d70b" ],
-							[ 0.50, "#f9c802" ],
-							[ 1.0, "#ff0000" ]
-						],
-			colorStart: color1,   		// Colors
-			colorStop: color2,    		// just experiment with them 
-			strokeColor: '#E0E0E0',   // to see which ones work best for you
-			generateGradient: true,
-			gradientType: 1
-		};
-
-		var gd = document.getElementById(canvas);
-		var gauge = new Gauge(gd).setOptions(opts); // create sexy gauge!
-		gauge.setTextField(document.getElementById(textfield));
-		gauge.maxValue = maxvalue; // set max gauge value
-		gauge.animationSpeed = 32; // set animation speed (32 is default value)
-		gauge.set(value); // set actual value
-		return gauge;
-	};
-	return {
-		initGauges: _initGauges,
-		gauges: _gauges
-	}
-}());
-
- 		 	resizeCanvas = function (id, height){          
-				canvas = document.getElementById(id);
-				if (canvas.width  < window.innerWidth) {
-					canvas.width  = window.innerWidth - 50;
-				}
-				if(typeof(height) != 'number') {
-					canvas.height = canvas.width / 8;
-				} else {
-					canvas.height = height;
-				}
-			};
+resizeCanvas = function (id, height){          
+  canvas = document.getElementById(id);
+  if (canvas.width  < window.innerWidth) {
+    canvas.width  = window.innerWidth - 50;
+  }
+  if(typeof(height) != 'number') {
+    canvas.height = canvas.width / 8;
+  } else {
+    canvas.height = height;
+  }
+};

@@ -5,80 +5,6 @@ html {
 	color:#000;
 	background:#fff;
 }
-div.gauge {
-  text-align: center;
-	border-radius: 8px;
-	float:left;
-	width: 160px;
-	height: 128px;
-	border: gray solid 1px;
-}
-div.biggauge {
-  text-align: center;
-	border-radius: 15px;
-	float:left;
-	width: 280px;
-	height: 224px;
-	border: gray solid 1px;
-}
-span.biggaugetext {
-	font:14px arial,sans-serif;
-	text-align: center;
-	font-weight: bold;	
-}
-span.gaugetext {
-	font:12px arial,sans-serif;
-	text-align: center;
-	font-weight: bold;	
-}
-/*
-@media screen and (max-width: 400px) {
-	div.gaugetext {
-		font:15px arial,sans-serif;
-		font-weight: normal;	
-		text-align: center;
-		height: 2em;
-		border: gray solid 1px; 
-	}
-	div.gauge {
-		float:left;
-		width: 120px;
-		height: 96px;
-		border: gray solid 1px;
-		display: inline-block;
-	}
-	div.biggauge {
-		float:left;
-		width: 240px;
-		height: 192px;
-		border: gray solid 1px;
-	}
-}
-*/
-div.linegraph {
-	float:left;
-	border: gray solid 1px;
-	padding: 2px;
-	margin: 2px;	
-	border-radius: 15px;
-	display: block;
-}
-div.graphselect {
-	font:15px arial,sans-serif;	
-	text-align: right;
-	padding: 0 25px 0 0;
-	display: inline; // force inline
-	float: right;
-}
-div.graphtext {
-	font:20px arial,sans-serif;
-	text-align: center;
-	font-weight: bold;
-	position: relative;
-	left: 4%;
-	float: left;
-	display: inline-block;
-}
 div.login {
 	font:15px arial,sans-serif;	
 	text-align: center;
@@ -96,3 +22,77 @@ div.login {
         0 1px 5px rgba(0,0,0,0.2),        
         0 0 0 12px rgba(255,255,255,0.4); 
 }
+span.gaugetext {
+	font: 12px sans-serif;
+	font-weight: bold;
+}
+div#gaugewrapper {
+/*	display:inline-block; */
+  background: #fff; font: 12px sans-serif;
+  text-align: center;
+  float: left;
+  width: 120px;
+  margin: 4px;
+}
+div.gauge {
+	width: 120px%;
+	height: 120px;
+}
+div#weather {
+  padding: 5px;
+  background: #fff; font: 10px sans-serif;
+  overflow:hidden;
+}
+div.sleep_variables {
+  width: 200px;
+  margin: 4px;
+  padding: 10px;
+  float: left;
+  background: #fff; font: 12px sans-serif;
+  overflow:hidden;
+}
+div.weather_variables {
+  width: 260px;
+  padding: 10px;
+  margin: 4px;
+  float: left;
+  background: #fff; font: 12px sans-serif;
+  overflow:hidden;
+}
+td.sleepdata_name {
+text-align: left;
+}
+td.sleepdata_value {
+  font-weight: bold;
+  text-align: right;
+}
+td.weatherdata_name {
+text-align: left;
+}
+td.weatherdata_value {
+  font-weight: bold;
+  text-align: right;
+}
+div#bullet-chart-wrapper{
+	overflow:hidden;
+	float: left;
+	margin: 4px;
+	width: 480px;
+}
+div.bullet-chart{
+	overflow:hidden;
+	float: left;
+	margin: 4px;
+	width: 480px;
+}
+.bullet { background: #fff; font: 10px sans-serif; }
+.bullet .marker { stroke: #000; stroke-width: 2px; }
+.bullet .tick line { stroke: #666; stroke-width: .5px; }
+.bullet .range.s0 { fill: #eee; }
+.bullet .range.s1 { fill: #ddd; }
+.bullet .range.s2 { fill: #ccc; }
+.bullet .measure.s1 { fill: lightsteelblue; }
+.bullet .measure.s0 { fill: steelblue; }
+.bullet .title { font-size: 14px; font-weight: bold; }
+.bullet .bulletvalue { font-size: 14px; font-weight: bold; fill: #333;}
+.bullet .subtitle { fill: #999; }

@@ -6,21 +6,20 @@
 		<link rel="stylesheet" type="text/css" href="style.css">
 		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
 		<link rel="stylesheet" href="./lib/mobiscroll/css/mobiscroll.custom-2.4.5.min.css" />
-<!--		<script type="text/javascript" src="./lib/gauge.js"></script> -->
-		<script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/justgage.1.0.1.js"></script>		
-		<script type="text/javascript" src="./lib/justGage.1.0.1/resources/js/raphael.2.1.0.min.js"></script>		
-		<script src="./lib/RGraph/libraries/RGraph.common.core.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.common.dynamic.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.common.tooltips.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.common.effects.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.common.key.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.line.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.drawing.marker2.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.hprogress.js" ></script>
-		<script src="./lib/RGraph/libraries/RGraph.bar.js" ></script>
+
 		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+		<script src="http://masonry.desandro.com/jquery.masonry.min.js"></script>
+
 		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" ></script>
+		<script src="http://d3js.org/d3.v2.js"></script>
+		<script src="http://code.highcharts.com/highcharts.js"></script>
+		<script src="http://code.highcharts.com/modules/exporting.js"></script>
+		<script src="http://omnipotent.net/jquery.sparkline/2.1.1/jquery.sparkline.js"></script>
+		<script src="http://code.highcharts.com/highcharts-more.js"></script>
+
+		<script src="./lib/bullet.js"></script>
+		<script src="./lib/amplify-1.1.0/amplify.js" ></script>
 		<script type="text/javascript" src="./lib/date.js"></script>
 		<script type="text/javascript" src="./app.js"></script>
 	</head>
@@ -32,121 +31,55 @@
 			$( "#button-next" ).live("click", function(){
 				wellnessAPI.nextDay();
 			});
-			$( "#checkbox-heartrate" ).live( "change", function(event, ui) {
-				graphUI.drawGraphs();
-			});
-			$( "#checkbox-noise" ).live( "change", function(event, ui) {
-				graphUI.drawGraphs();
-			});
-			$( "#checkbox-luminosity" ).live( "change", function(event, ui) {
-				graphUI.drawGraphs();
-			});
 			$(document).ready(function() {
 				var today = new Date();
-	    	$('#datescroller').mobiscroll().date({
- 	        theme: 'jqm',
- 	        display: 'bubble',
- 	        mode: 'mixed',
- 	        animate: 'fade',
- 	        dateOrder: 'mmD ddyy',
+				$('#datescroller').mobiscroll().date({
+					theme: 'jqm',
+					display: 'bubble',
+					mode: 'mixed',
+					animate: 'fade',
+					dateOrder: 'mmD ddyy',
 					maxDate: today,
 					onSelect: function(dateText, instance) { 
-						wellnessAPI.setDate($('#datescroller').mobiscroll('getDate')); 
+						wellnessAPI.setDate($('#datescroller').mobiscroll('getDate'));
+						event.stopPropagation();
+						return instance;
 					}
- 		   	});
+				});
 				setTimeout('$( "#password-dialog" ).popup( "open" )', 500);
 			});
 		</script>
+		
 		<div data-role="page"> 
 			<div data-role="header">
 				<h1><span id="usertext">Wellness Dashboard</span></h1>
 			</div>
 			<div data-role="content">
-				<div style="text-align: center; display:block; width:auto;">
+				<div style="text-align: center; display:block; width:auto; visibility:hidden" id="dateselect">
 					<input type="button" data-mini="true" data-icon="arrow-l" id="button-prev" data-theme="b" data-inline="true" value="Prev Day" />
 					<input name="datescroller" data-mini="true" id="datescroller" class="i-txt" data-theme="b" style="display:inline-block;width:auto;" />
 					<input type="button" data-mini="true" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
 				</div>
 
-				<div id="withings" style="visibility: hidden; text-align:center;">
-						<div class="gauge">		
-							<span class="gaugetext">Systolic pressure</span>
-							<div id="sysbloodpressure"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Diastolic pressure</span>
-							<div id="diasbloodpressure"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Heart rate</span>
-							<div id="withingspulse"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Weight</span>
-							<div id="weight"></div>
-						</div>
-				</div>
-
-				<div id="fitbit" style="visibility: hidden; text-align:center;">
-						<div class="gauge">		
-							<span class="gaugetext">Burned calories</span>
-							<div id="calories"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Activity score</span>
-							<div id="activityscore"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Steps taken</span>
-							<div id="steps"></div>
-						</div>
-						<div class="linegraph">
-							<div class="graphtext">Activity data</div>
-							<canvas id="activitygraph"></canvas>
-						</div>
-				</div>
+        <div id="masonry-container">
+        </div>
 
 
-					<div id="beddit" style="visibility:hidden; text-align:center;">
-						<div class="gauge">
-							<span class="gaugetext">Deep sleep</span>
-							<div id="deepsleep" style="width: 200; height: 160"></div>
-						</div>
-						<div class="gauge">				
-							<span class="gaugetext">Sleep efficiency</span>
-							<div id="efficiency"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Total sleep</span>
-							<div id="totalsleep"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Time awake</span>
-							<div id="timeawake"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Resting heart rate</span>
-							<div id="heartrate"></div>
-						</div>
-						<div class="gauge">		
-							<span class="gaugetext">Noise</span>
-							<div id="noise"></div>
-						</div>
-
-					<div class="linegraph">
-						<div class="graphtext">Detailed sleep data</div>
-						<div class="graphselect">
-							<fieldset data-role="controlgroup" data-mini="true" data-type="horizontal" style="display: inline; float: right; padding-right: 0.5em;">
-								<input type="checkbox" checked="true" name="checkbox-noise" id="checkbox-noise" class="custom" data-mini="true" />
-								<label for="checkbox-noise">Noise</label>
-								<input type="checkbox" checked="true" name="checkbox-luminosity" id="checkbox-luminosity" class="custom" data-mini="true" />
-								<label for="checkbox-luminosity">Luminosity</label>    
-							</fieldset>
-						</div>
-						<canvas id="sleepstagegraph"></canvas>
-						<canvas id="heartlinegraph"></canvas>
-					</div>
-				</div>
+				<div class="ui-grid-b">
+          <div class="ui-block-a" id="grid-left-block">
+          </div>
+          <div class="ui-block-b" id="grid-center-block">
+          </div>
+          <div class="ui-block-c" id="grid-right-block">
+          </div>
+        </div>
+        <div class="ui-grid-solo">
+          <div class="ui-block-a" id="grid-solo-block"></div>
+        </div>
+        
+        
+				
+				<div id="highchart"></div>
 
 				<p style="display:none">
 						<span id="datetext"></span>
