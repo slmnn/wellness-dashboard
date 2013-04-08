@@ -22,6 +22,14 @@ div.login {
         0 1px 5px rgba(0,0,0,0.2),        
         0 0 0 12px rgba(255,255,255,0.4); 
 }
+div#gantt {
+  display:none;
+  height: 140px
+}
+div#highchart {
+  display:none;
+  height: 400px
+}
 span.gaugetext {
 	font: 12px sans-serif;
 	font-weight: bold;
@@ -44,6 +52,7 @@ div#weather {
   overflow:hidden;
 }
 div.sleep_variables {
+  text-align: center;
   width: 200px;
   margin: 4px;
   padding: 10px;
@@ -52,12 +61,35 @@ div.sleep_variables {
   overflow:hidden;
 }
 div.weather_variables {
+  text-align: center;
   width: 260px;
   padding: 10px;
   margin: 4px;
   float: left;
   background: #fff; font: 12px sans-serif;
   overflow:hidden;
+}
+div.calendar_events {
+  text-align: center;
+  width: 260px;
+  padding: 10px;
+  margin: 4px;
+  float: left;
+  background: #fff; font: 12px sans-serif;
+  overflow:hidden;
+}
+td.cal_start{
+  font-weight: bold;
+}
+td.cal_end{
+  font-weight: bold;
+}
+td.cal_summary{
+  width: 170px;
+  text-align: right;
+}
+td.cal_empty{
+  text-align: center;
 }
 td.sleepdata_name {
 text-align: left;

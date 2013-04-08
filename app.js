@@ -3,6 +3,7 @@ var userData = (function(userData) {
 	var _credentials = undefined;
 	var _username = undefined;
   var _services = [];
+  var _calendars = [];
 	var _beddit = false;
 	var _withings = false;
 	var _fitbit = false;
@@ -13,22 +14,21 @@ var userData = (function(userData) {
 		data: _data,
 		credentials: _credentials,
 		services: _services,
+		calendars: _calendars,
 		beddit: _beddit,
 		withings: _withings,
 		fitbit: _fitbit
 	}
 }());
 
-
 var gaugeUI = (function(gaugeUI) {
-  _createGauge = function(targetDIVid, options, sourcedata) {
+  var _createGauge = function(targetDIVid, options, sourcedata) {
     var gauge = $('#gauge_' + options.id).highcharts();
     if(typeof(gauge) == 'undefined') {
       var HTML = $('<div id="gaugewrapper" class="masonry-box"><span class="gaugetext">' + options.name + '</span></br><div id="gauge_' + options.id + '" class="gauge"></div></div>');
       $(targetDIVid).append(HTML).masonry('appended', HTML);
       $('#masonry-container').masonry( 'reload' );
       $("#gauge_" + options.id).highcharts({
-    
         chart: {
             type: 'gauge',
             plotBackgroundColor: null,
@@ -116,11 +116,20 @@ var gaugeUI = (function(gaugeUI) {
       point.update(sourcedata.value);
     }
   };
-
-  _init = function() {
+  var _setAllToZero = function() {
+    $( ".gauge" ).each(function( index ) {
+      var gauge = $(this).highcharts();
+      var point = gauge.series[0].points[0];
+      point.update(0);
+    });
+  }
+  var _init = function() {
 		amplify.subscribe('new_gauge', function(d) {
       console.log('new_gauge', d);
 			_createGauge(d.targetDIVid, d.options, d.data);
+		});
+    amplify.subscribe('gauges_to_zero', function(d) {
+      _setAllToZero();
 		});
   };
   return {
@@ -131,10 +140,11 @@ var gaugeUI = (function(gaugeUI) {
 var bulletChartUI = (function(bulletChartUI) {
 	var chart, parentDIVID, margin, width, height;
 	
-	_init = function() {
+	var _init = function() {
 		parentDIVID = "#masonry-container";
 		var parentwidth = $(parentDIVID).width() / 2;
-		var HTML = $('<div id="bullet-chart-wrapper" style="width:' + parentwidth + 'px;" class="masonry-box"></div>');
+		var HTML = $('<div id="bullet-chart-wrapper" style="width: '+ parentwidth + 'px" class="masonry-box"></div>');
+    var wrapperwidth = $('#bullet-chart-wrapper').width();
     $(parentDIVID).append(HTML).masonry('appended', HTML);
 		margin = {top: 5, right: parentwidth * 0.05, bottom: 20, left: 160},
 			width = parentwidth - margin.left - margin.right,
@@ -155,7 +165,7 @@ var bulletChartUI = (function(bulletChartUI) {
 		});
 	}
 
-  _createBulletChart = function(id, data) {
+  var _createBulletChart = function(id, data) {
     var HTML = $('<div class="bullet-chart"  style="width:' + $(parentDIVID).width() / 2 + 'px;" id="'+ id +'"></div>');
     $('#bullet-chart-wrapper').append(HTML); //.masonry('appended', HTML);
     
@@ -194,7 +204,7 @@ var bulletChartUI = (function(bulletChartUI) {
     $('#masonry-container').masonry( 'reload' );
   };
   
-  _updateBulletChart = function(id, data) {
+  var _updateBulletChart = function(id, data) {
     d3.select('#'+id).selectAll("svg") 
         .data([data]) 
         .call(chart); 
@@ -218,7 +228,7 @@ var bulletChartUI = (function(bulletChartUI) {
       .text('' + data.valuetxt);  
   };
   
-  _remove = function(id) {
+  var _remove = function(id) {
     $('#'+id).remove();
   };
   
@@ -232,7 +242,7 @@ var bulletChartUI = (function(bulletChartUI) {
 highchartsUI = (function(highchartsUI) {
 	var _container = '#highchart';
 	
-	_createSeries = function(data) {
+	var _createSeries = function(data) {
     var d = Date.parse(data.pointStart)
 		return  {
 			'name': data.name,
@@ -244,7 +254,7 @@ highchartsUI = (function(highchartsUI) {
 		}
 	};
 	
-	_mapData = function(data) {
+	var _mapData = function(data) {
 		var start = _options.start;
 		var end = _options.end;
 		var result = [];
@@ -262,14 +272,14 @@ highchartsUI = (function(highchartsUI) {
 		return result;
 	};
 	
-	_clear = function() {
+	var _clear = function() {
     var chart = $(_container).highcharts();
     if(typeof(chart) == 'object') {
       console.log('Removing highchart', chart.series.length);
       //highchartsUI.chart().destroy();
-      for (var i = 0; i < chart.series.length; i++) {
-        chart.series[i].remove(true); //forces the chart to redraw
-      }
+//      for (var i = 0; i < chart.series.length; i++) {
+//        chart.series[i].remove(true); //forces the chart to redraw
+//      }
       if(chart.series.length > 0) {
         while(chart.series.length > 0) {
           chart.series[0].remove(true); //forces the chart to redraw
@@ -289,7 +299,8 @@ highchartsUI = (function(highchartsUI) {
 		'initSeries':[{'name':'foo', 'data': [1,2,3,4,5,6], 'type':'spline'},]
 	}
 	
-	_init = function(options) {
+	var _init = function(options) {
+    $(_container).css({"display":"block"});
 		if(typeof(options) != 'undefined')	_options = options;
 		$(_container).highcharts({
 				chart: {
@@ -301,7 +312,7 @@ highchartsUI = (function(highchartsUI) {
 						text: _options.title
 				},
 				subtitle: {
-						text: _options.subtitle
+						text: 'Click and drag in the plot area to zoom in'
 				},
 				xAxis: {
           type: "datetime",    
@@ -319,14 +330,10 @@ highchartsUI = (function(highchartsUI) {
 				},
 				plotOptions: {
             line: {
+                showInLegend: false,
                 lineWidth: 2,
-                states: {
-                    hover: {
-                        lineWidth: 4
-                    }
-                },
                 marker: {
-                    enabled: false,
+                    enabled: true,
                     states: {
                         hover: {
                             enabled: true
@@ -350,6 +357,27 @@ highchartsUI = (function(highchartsUI) {
                     }
                 }
             },
+            scatter: {
+                marker: {
+                    radius: 6,
+                    states: {
+                        hover: {
+                            enabled: true,
+                        }
+                    }
+                },
+                states: {
+                    hover: {
+                        marker: {
+                            enabled: false
+                        }
+                    }
+                },
+                tooltip: {
+                    headerFormat: '<b>{series.name}</b>',
+                    pointFormat: '{point.key}'
+                }
+            },
             area: {
                 lineWidth: 2,
                 states: {
@@ -369,8 +397,8 @@ highchartsUI = (function(highchartsUI) {
         },
 				tooltip: {
 						headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
-						pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
-								'<td style="padding:0"><b>{point.y:.1f}</b></td></tr>',
+						pointFormat:  '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                          '<td style="padding:0"><b>{point.y:.1f}</b></td><td style="padding:0"><b>{point.text}</td></tr>',
 						footerFormat: '</table>',
 						shared: true,
 						useHTML: true
@@ -379,15 +407,37 @@ highchartsUI = (function(highchartsUI) {
 		});
 	};
 	
-	_chart = function() {
+	var _chart = function() {
 		return $(_container).highcharts();
 	}
+
+  var _createMilestones = function(milestones) {
+    var series = [];
+    $.each(milestones, function(i, milestone) {
+        var item = Highcharts.extend(milestone, {
+            data: [[
+                milestone.time,
+                milestone.task
+            ]],
+            type: 'scatter'
+        });
+        series.push(item);
+    });
+    return series;
+  };
 
 	amplify.subscribe('new_timeline_dataset', function(data) {
 		console.log('new_timeline_dataset', data);
 		var series = _createSeries(data);
 		console.log('new series', series);
 		_chart().addSeries(series, false);
+		_chart().redraw();
+	});
+	
+  amplify.subscribe('new_timeline_milestone', function(data) {
+		console.log('new_timeline_milestone', data);
+		var series = _createMilestones(data);
+		_chart().addSeries(series[0], false);
 		_chart().redraw();
 	});
 
@@ -398,8 +448,169 @@ highchartsUI = (function(highchartsUI) {
 	}
 }());
 
+var ganttUI = (function(ganttUI) {
+  var _parentDIV = "gantt";
+  var _series, _tasks, _chart;
+  var _clearGraph = function() {
+    if(typeof(_chart) == 'object') {
+      console.log('Removing gantt', _chart.series.length);
+      for (var i = 0; i < _chart.series.length; i++) {
+        _chart.series[i].remove(true); //forces the chart to redraw
+      }
+      if(_chart.series.length > 0) {
+        while(_chart.series.length > 0) {
+          _chart.series[0].remove(true); //forces the chart to redraw
+        }
+        _chart.redraw();
+        console.log('Removing gantt complete', _chart.series.length);
+      }
+    }
+  };
+  var _createGraph = function() {
+    // create the chart
+    _chart = new Highcharts.Chart({
+        chart: {
+            renderTo: _parentDIV,
+            type: 'line'
+        },
+        title: {
+            text: null
+        },
+        xAxis: {
+            type: 'datetime'
+        },
+        yAxis: {
+            tickInterval: 1,
+            labels: {
+                formatter: function() {
+                    if (_tasks[this.value]) {
+                        return _tasks[this.value].name;
+                    }
+                }
+            },
+            startOnTick: false,
+            endOnTick: false,
+            title: {
+                text: null
+            },
+                minPadding: 0.2,
+                maxPadding: 0.2
+        },
+        legend: {
+            enabled: false
+        },
+        tooltip: {
+            formatter: function() {
+                return '<b>'+ _tasks[this.y].name + '</b><br/>' +
+                    Highcharts.dateFormat('%H:%M', this.point.options.from)  +
+                    ' - ' + Highcharts.dateFormat('%H:%M', this.point.options.to); 
+            }
+        },
+        plotOptions: {
+            line: {
+                lineWidth: 9,
+                marker: {
+                    enabled: false
+                },
+                dataLabels: {
+                    enabled: true,
+                    align: 'left',
+                    formatter: function() {
+                        return this.point.options && this.point.options.label;
+                    }
+                }
+            }
+        },
+        series: _series
+    });
+  };
+  var _createSeries = function(tasks) {
+    // re-structure the tasks into line seriesvar series = [];
+    var series = [];
+    $.each(tasks.reverse(), function(i, task) {
+        var item = {
+            name: task.name,
+            data: []
+        };
+        $.each(task.intervals, function(j, interval) {
+            item.data.push({
+                x: interval.from,
+                y: i,
+                label: interval.label,
+                from: interval.from,
+                to: interval.to
+            }, {
+                x: interval.to,
+                y: i,
+                from: interval.from,
+                to: interval.to
+            });
+            
+            // add a null value between intervals
+            if (task.intervals[j + 1]) {
+                item.data.push(
+                    [(interval.to + task.intervals[j + 1].from) / 2, null]
+                );
+            }
+        });
+        series.push(item); 
+    });
+    return series;
+  };
+  var _appendToSeries = function(task) {
+    _tasks = _tasks.concat(task);
+    var newItem = _createSeries(task);
+    _series = _series.concat(newItem);
+    for(var i = 0; i < newItem.length; i++) {
+      _chart.addSeries(newItem[i], false);
+      _chart.redraw();
+		}
+  }
+  var _init = function() {
+    amplify.subscribe('new_gantt_chart', function(data) {
+      console.log("new_gantt_chart", data);
+      if(typeof(_chart) == 'undefined') {
+        $('#' + _parentDIV).css({"display":"block"});
+        _tasks = data.tasks;
+        _series = _createSeries(data.tasks);
+        _createGraph();
+        // var milestones = _createMilestones(data.milestones);
+      } else {
+        _appendToSeries(data.tasks);
+      }
+    });
+  };
+  return {
+    init: _init,
+    clear: _clearGraph
+  }
+}());
+
+var bulletSparkUI = (function(weatherUI) {
+	var _init = function() {
+    var HTML = $('<div class="masonry-box"><table id="activity_variables"></table></div>');
+    $("#masonry-container").append(HTML).masonry('appended', HTML);
+		amplify.subscribe('update_bullet_chart', function(data) {
+      console.log('update_bullet_chart spark', data.id, data.chart);
+      $('#activity_table_row_' + data.id).remove();
+			var HTML = $(
+        '<tr id="activity_table_row_' + data.id + '"><td class="activity_name">' + data.chart.title + '</td>'+
+        '<td class="activity_value">' + data.chart.valuetxt + ' ' + data.chart.subtitle + '</td>'+
+        '<td><span id="activity_sparkline_' + data.id + '"></span></td></tr>'
+      );
+			$('#activity_variables').append(HTML);
+			// Goal, value, target1, target2, target3
+      $('#activity_sparkline_' + data.id).sparkline([data.chart.markers[0], data.chart.measures[0], data.chart.ranges[2], data.chart.ranges[1], data.chart.ranges[0]], {type: 'bullet', width:'100px'});
+      $('#masonry-container').masonry( 'reload' );
+		});
+	};
+	return {
+		init: _init
+	}
+}());
+
 var weatherUI = (function(weatherUI) {
-	_init = function() {
+	var _init = function() {
 		amplify.subscribe('weather_history', function(data) {
 			var summary = data.history.dailysummary[0];
 			console.log('Weather data for ' + summary.date.pretty, summary);
@@ -435,12 +646,74 @@ var weatherUI = (function(weatherUI) {
 	}
 }());
 
+var calendarUI = (function(calendarUI) {
+  var _clear = function() {
+    $('.calendar_events').remove();
+  }
+	var _init = function() {
+		amplify.subscribe('calendar_events', function(data) {
+      var events = data.events;
+      var etag = data.events.etag.replace(/"/g, 'A');
+      etag = etag.replace(/\//g, 'ForwardSlash');
+			console.log('Calendar data for ' + data.date, events);
+			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+			var weekday = weekdays[Date.parse(data.date).getDay()];
+      var SUMMARY_MAX_LENGTH = 15;
+      var summary = events.summary;
+      if(summary.length > SUMMARY_MAX_LENGTH) {
+        var summary = events.summary.substring(0,SUMMARY_MAX_LENGTH) + '...';
+      }
+			var HTML = $('<div class="masonry-box calendar_events" id="calendar_events_'+ etag +'">' + 
+        '<b>Calendar: ' + summary + ' (' + weekday + ')</b></br>' +
+        '<table id="calendar_events_'+ etag +'_table">'+
+        '</table>' +
+        '</div>');
+      $("#masonry-container").append(HTML).masonry('appended', HTML);
+      if(typeof(events.items) != 'undefined') {
+        for(var i = 0; i < events.items.length; i++) {
+          if(typeof(events.items[i].start) != 'undefined' && typeof(events.items[i].start) != 'undefined') {
+            console.log(i);
+            if(typeof(events.items[i].start.dateTime) != 'undefined' && typeof(events.items[i].start.dateTime) != 'undefined') {
+              var start = Date.parse(events.items[i].start.dateTime).toString("HH:mm") + ' - ';
+              var end = Date.parse(events.items[i].end.dateTime).toString("HH:mm");
+            } else {
+              start = 'All day';
+              end = "";
+            }
+            var SUMMARY_MAX_LENGTH = 25 ;
+            var summary = events.items[i].summary;
+            if(summary.length > SUMMARY_MAX_LENGTH) {
+              var summary = events.items[i].summary.substring(0,SUMMARY_MAX_LENGTH) + '...';
+            }
+            var HTML = $(
+              '<tr><td class="cal_start">' + start +'</td>'+
+              '<td class="cal_end">' + end + '</td>' + 
+              '<td class="cal_summary">' + summary + '</td></tr>'
+            );
+            $('#calendar_events_' + etag + '_table').append(HTML);
+          }
+        }
+      } else {
+        var HTML = $(
+          '<tr><td class="cal_empty">No events today!</td></tr>'
+        );
+        $('#calendar_events_' + etag + '_table').append(HTML);
+      }
+      $('#masonry-container').masonry( 'reload' );
+		});
+	};
+	return {
+		init: _init,
+		clear: _clear
+	}
+}());
+
 var weatherAPI = (function(weatherAPI) {
 	var baseurl = 'http://ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:8080/';
-	_weatherHistoryCB = function(data) {
+	var _weatherHistoryCB = function(data) {
 		amplify.publish('weather_history', data);
 	};
-	_getWeatherHistory = function(address, date) {
+	var _getWeatherHistory = function(address, date) {
 		// First we check the services available for the user
 		var day = ("0" + date.getDate()).slice(-2);
 		var month = ("0" + (date.getMonth() + 1)).slice(-2);
@@ -467,7 +740,7 @@ var weatherAPI = (function(weatherAPI) {
 var wellnessAPI =(function(wellnessAPI) {
 	var baseurl = 'https://wellness.cs.tut.fi/';
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-	_sleepCB = function(data) {
+	var _sleepCB = function(data) {
     $('.sleep_variables').remove();
 		var json = $.parseJSON(data);
 		for(var i = 0; i < json.data.length; i++) {
@@ -482,6 +755,79 @@ var wellnessAPI =(function(wellnessAPI) {
 			} else {
 				console.log('Valid Beddit analysis available on ' + data.date, data);
 			}
+			
+			// Sleep phases
+      var rem = [];
+      var deep = [];
+      var light = [];
+      var wake = [];
+      var j = 0;
+      var stageDur = 0;
+      var d1, d2;
+      for(j = 0; j < data.sleep_stages.length; j++) {
+        if(j == 0) {
+          stageDur += 5;
+          d1 = Date.parse(data.sleep_stages[j][0]);
+          continue;
+        }
+        if(data.sleep_stages[j][1] != data.sleep_stages[j-1][1]) {
+          if(data.sleep_stages[j-1][1] == 'D') {
+            deep.push({
+                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                label: ''
+            });
+          }
+          if(data.sleep_stages[j-1][1] == 'R') {
+            rem.push({
+                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                label: ''
+            });
+          }
+          if(data.sleep_stages[j-1][1] == 'L') {
+            light.push({
+                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                label: ''
+            });
+          }
+          if(data.sleep_stages[j-1][1] == 'W') {
+            wake.push({
+                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                label: ''
+            });
+          }
+          stageDur = 5;
+          d1 = Date.parse(data.sleep_stages[j][0]);
+        } else {
+          stageDur += 5;
+        }
+        // Implement parseStages function that gives an array of intervals
+      } 
+      var sleepStageData = { 
+        id: 'gantt_sleep_stages',
+        tasks: [
+          {
+            name: 'Light Sleep',
+            intervals: light
+          },
+          {
+            name: 'REM Sleep',
+            intervals: rem
+          },
+          {
+            name: 'Deep Sleep',
+            intervals: deep
+          },
+          {
+            name: 'Wake',
+            intervals: wake
+          }
+        ]
+      };
+      amplify.publish('new_gantt_chart', sleepStageData);
 						
 			var daynumber = Date.parse(data.date).getDay(); 
 			console.log('Publishing sleep data ', daynumber, weekdays[daynumber], i, json.data.length)
@@ -489,16 +835,10 @@ var wellnessAPI =(function(wellnessAPI) {
         {'name':'Noise (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.noise_measurements[0][0]),'data':data.noise_measurements,'type':'area'});
 			amplify.publish('new_timeline_dataset',
         {'name':'Luminosity (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.luminosity_measurements[0][0]),'data':data.luminosity_measurements,'type':'area'});
+			var dps = Date.parse(data.averaged_heart_rate_curve[0][0]);
+			console.log(dps.getTime());
 			amplify.publish('new_timeline_dataset',
         {'name':'Heart rate (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.averaged_heart_rate_curve[0][0]),'data':data.averaged_heart_rate_curve,'type':'spline'});
-
-//			amplify.publish('new_timeline_dataset',
-//        {'name':'Temperature (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.temperature_measurements[0][0]),'data':data.temperature_measurements,'type':'line'});
-
-//			var value = Math.round(data.sleep_efficiency * 100) / 100;
-//			amplify.publish('update_bullet_chart', 
-//        { 'id':'sleep_efficiency', 'chart': {"title":"Sleep efficiency","subtitle":"percent","ranges":[70,80,90],"measures":[value],"markers":[100],"valuetxt":value}}
-//      );
       
       var HTML = $('<div class="masonry-box sleep_variables" id="sleep_variables_' + i + '">' +
         '<b>Sleep variables (' + weekdays[daynumber] + ')</b></br>' +
@@ -515,18 +855,14 @@ var wellnessAPI =(function(wellnessAPI) {
         '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + data.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>'
       );
 	  
-//      $('#sleep_efficiency_sparkline_' + i).sparkline(temperature_sparkline, {'type': 'pie', 'width':'100px'});
       $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(data.time_sleeping/3600 * 100) / 100],[Math.round(data.time_deep_sleep/3600 * 100) / 100],[ Math.round(data.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
-//      $('#sleep_time_deep_sparkline_' + i).sparkline(humidity_sparkline, {'type': 'pie', width:'100px'});	  
-//      $('#sleep_time_light_sparkline_' + i).sparkline(humidity_sparkline, {'type': 'pie', width:'100px'});	  
       $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(data.time_in_bed/3600 * 100) / 100, Math.round((data.time_in_bed-data.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
-//      $('#sleep_stress_sparkline_' + i).sparkline(humidity_sparkline, {'type': 'pie', width:'100px'});	  
       
       $('#masonry-container').masonry( 'reload' );
 		}
 	};
 
-	_withingsCB = function(data) {
+	var _withingsCB = function(data) {
 		var json = $.parseJSON(data);
 		
 		if(json.data[0].latest.weight != undefined) {
@@ -661,7 +997,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 	};
 
-	_getData = function(apicall, cb) {
+	var _getData = function(apicall, cb) {
 		var myurl = baseurl + apicall;
 		$.ajax(
 			{
@@ -675,29 +1011,83 @@ var wellnessAPI =(function(wellnessAPI) {
 		).done(cb);
 	};
 	
-	_getWeightData = function() {
+	var _getWeightData = function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('api/unify/measures/' + daypath + '/days/1/', _withingsCB);
 	};
 
-	_getSleepData =	function() {
+	var _getSleepData =	function() {
 		// We should get yesterdays and tomorrows data
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('api/unify/sleep/' + daypath + '/days/2/', _sleepCB);
 	};
 
-	_getFitbitSummaryData =	function() {
+	var _getFitbitSummaryData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('fitbit/api/activities/' + daypath + '/', _fitbitSummaryCB);
 	};
 
-	_getFitbitActivityDataset =	function() {
+	var _getCalendarData = function() {
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		for(var i = 0; i < userData.calendars.length; i++) {
+      var url = 'calendar/id/' + userData.calendars[i] + '/events/' + daypath + '/';
+      var cacheValue = amplify.store(url);
+      if(typeof(cacheValue) != 'undefined') {
+        console.log("Found from local store " + url);
+        var json = JSON.parse(cacheValue);
+        amplify.publish('calendar_events', {'date': _currentday.toString("yyyy-MM-dd"), 'events': json});
+      } else {
+        _getData(url, function(data) {
+          var json = JSON.parse(data);
+          amplify.store(url, data);
+          amplify.publish('calendar_events', {'date': _currentday.toString("yyyy-MM-dd"), 'events': json});
+        });
+      }
+    }
+	};
+
+	var _getFitbitActivityDataset =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
 			var json = $.parseJSON(data);
 
 			if(json.data[0].activities != undefined) {
 				console.log("TODO: Handle activities");
+				var activityDay = Date.parse(json.data[0].date);
+				var year = activityDay.getFullYear();
+				var month = activityDay.getMonth();
+				var day = activityDay.getDate();
+				for(var i = 0; i < json.data[0].activities.length; i++) {
+          var a = json.data[0].activities[i];
+          var hour = parseInt(a.startTime.split(':')[0]);
+          var minute = parseInt(a.startTime.split(':')[1]);
+          var durMS = parseInt(a.duration);
+          console.log("Publishing Activity", year, month, day, hour, minute, durMS);
+          var data = {
+            id: 'activity_stages',
+            tasks: [
+              {
+                name: 'Activity',
+                intervals: [{ // From-To pairs
+                    from: Date.UTC(year, month, day, hour, minute),
+                    to: Date.UTC(year, month, day, hour, minute, 0, durMS),
+                    label: a.name.substring(0,6) + '...'
+                }]
+              }
+            ]
+          };
+          //amplify.publish('new_gantt_chart', data);
+          var activityTimeStamp = json.data[0].date.split('T')[0] + 'T' + json.data[0].activities[i].startTime;
+          amplify.publish('new_timeline_dataset',
+            {'name':a.name.substring(0,6) + '...',
+            'type':'line','lineWidth':0,
+            'pointInterval': json.data[0].activities[i].duration, 
+            'pointStart': Date.parse(activityTimeStamp),
+            'data':[activityTimeStamp, 0],
+            'text':a.name}
+          );
+        }
+
 			} else {
 				console.log("No activities data available on " + daypath, json);
 			}
@@ -755,7 +1145,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		});
 	};
 
-	_setDate = function(dateString) {
+	var _setDate = function(dateString) {
 		_currentday = Date.parse(dateString);
 		if(_currentday == 'Invalid Date' || _currentday == null)
 			_currentday = Date.today();
@@ -763,7 +1153,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		_refreshData();
 	};
 
-	_disableNextDayButton = function() {
+	var _disableNextDayButton = function() {
 		if(Date.compare(_currentday.clearTime(), _today) > 0) {
 			$( "#button-next" ).button( "disable" );
 		}	else {
@@ -771,14 +1161,14 @@ var wellnessAPI =(function(wellnessAPI) {
 		}
 	};
 
-	_disableLoginDialog = function() {
+	var _disableLoginDialog = function() {
 			$( "#username" ).textinput( "disable" );
 			$( "#password" ).textinput( "disable" );
 			$( "#login-btn" ).button( "disable" );
 	};
 
 	var _today = Date.today();
-	_init = function() {
+	var _init = function() {
 		_currentday = new Date(_today.addDays(-1));
 		$("#dateselect").css({"visibility":"visible"});
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
@@ -793,16 +1183,17 @@ var wellnessAPI =(function(wellnessAPI) {
       }
     });
 		bulletChartUI.init();
+		bulletSparkUI.init();
 		weatherUI.init();
 		weatherAPI.getWeatherHistory(userData.address, _currentday);
-		if(!Date.equals(Date.today(), _currentday.clone().clearTime()))
+		if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
       weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
+    }
+    if(userData.calendars.length > 0) {
+      calendarUI.init();
+      _getCalendarData();
+    }
 		if(userData.beddit) {
-
-//      amplify.publish('new_bullet_chart', 
-//        { 'id':'sleep_efficiency', 'chart': {"title":"Sleep efficiency","subtitle":"percent","ranges":[70,80,90],"measures":[0],"markers":[100],"valuetxt":0} }
-//      );
-
      	_getSleepData();
 			$("#beddit").css({"visibility":"visible"});
 		} 
@@ -851,26 +1242,34 @@ var wellnessAPI =(function(wellnessAPI) {
 			};
 			highchartsUI.init(options);
 			highchartsUI.clear();
+			ganttUI.init();
 		}
 	};
 
-	_refreshData = function() {
+	var _refreshData = function() {
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		if(userData.fitbit || userData.beddit) {
       highchartsUI.clear();
+      ganttUI.clear();
 		}
 		if(userData.beddit) {
      	_getSleepData();
 		}
 
 		if(userData.withings) {
+      amplify.publish('gauges_to_zero');
 			_getWeightData();
 		}
 
 		if(userData.fitbit) {
 			_getFitbitActivityDataset();
 		}
+
+    if(userData.calendars.length > 0) {
+      calendarUI.clear();
+      _getCalendarData();
+    }
 
     $("div[id*=weather_variables]").remove();
 		weatherAPI.getWeatherHistory(userData.address, _currentday);
@@ -880,14 +1279,14 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	var _currentday;
 
-	_prevDay = function() {
+	var _prevDay = function() {
 		_currentday = _currentday.addDays(-1);
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
 		_refreshData();
 	};
 
-	_nextDay = function() {
+	var _nextDay = function() {
 		_currentday = _currentday.addDays(1);
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
@@ -936,7 +1335,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	            userData.fitbit = true;
 						}
 						$("#servicestext").text(" (" + userData.services.toString() + ") ");
-						
+						userData.calendars = json.calendars;
 						// Login successfull
 						userData.username = username;
 						userData.credentials = credentials;
