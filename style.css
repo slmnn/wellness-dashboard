@@ -5,6 +5,11 @@ html {
 	color:#000;
 	background:#fff;
 }
+table
+{ 
+margin-left: auto;
+margin-right: auto;
+}
 div.login {
 	font:15px arial,sans-serif;	
 	text-align: center;
@@ -24,7 +29,7 @@ div.login {
 }
 div#gantt {
   display:none;
-  height: 140px
+  height: 200px
 }
 div#highchart {
   display:none;
@@ -53,7 +58,7 @@ div#weather {
 }
 div.sleep_variables {
   text-align: center;
-  width: 200px;
+  width: 300px;
   margin: 4px;
   padding: 10px;
   float: left;
@@ -62,7 +67,33 @@ div.sleep_variables {
 }
 div.weather_variables {
   text-align: center;
-  width: 260px;
+  margin-top: 10px;
+  width: 300px;
+  padding: 10px;
+  margin: 4px;
+  float: left;
+  background: #fff; font: 12px sans-serif;
+  overflow:hidden;
+}
+div.activity_variables {
+  text-align: center;
+  width: 300px;
+  padding: 10px;
+  margin: 4px;
+  float: left;
+  background: #fff; font: 12px sans-serif;
+  overflow:hidden;
+}
+td.activity_name {
+  text-align: left;
+}
+td.activity_value {
+  font-weight: bold;
+  text-align: right;
+}
+div.calendar_events-container {
+  text-align: center;
+  width: 300px;
   padding: 10px;
   margin: 4px;
   float: left;
@@ -70,13 +101,7 @@ div.weather_variables {
   overflow:hidden;
 }
 div.calendar_events {
-  text-align: center;
-  width: 260px;
-  padding: 10px;
-  margin: 4px;
-  float: left;
-  background: #fff; font: 12px sans-serif;
-  overflow:hidden;
+  margin-top: 10px;
 }
 td.cal_start{
   font-weight: bold;
@@ -90,6 +115,10 @@ td.cal_summary{
 }
 td.cal_empty{
   text-align: center;
+}
+table.sleepdata_table{
+  margin-left: 20px;
+  margin-right: 20px;
 }
 td.sleepdata_name {
 text-align: left;

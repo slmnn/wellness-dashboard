@@ -242,16 +242,60 @@ var bulletChartUI = (function(bulletChartUI) {
 highchartsUI = (function(highchartsUI) {
 	var _container = '#highchart';
 	
-	var _createSeries = function(data) {
+	var _arrayMin = function(a) {
+    var min = a[0][1];
+    for(var i = 0; i < a.length; i++) {
+      if(a[i] != null) if(a[i][0] != null) if(a[i][1] < min) min = a[i][1];
+    }
+    console.log('min',min);
+    return min;
+	}
+	
+	var _createSeries = function(data, axisID) {
     var d = Date.parse(data.pointStart)
-		return  {
-			'name': data.name,
-      'type': data.type,
-			'data': data.data, //_mapData(data.data),
-			'data.marker.enabled': false,
-			'pointStart': Date.UTC(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()),
-			'pointInterval': data.pointInterval
-		}
+    var result;
+    if(_chart().series.length >= 0) {
+      if(_chart().get(data.id + '-axis') == null) {
+        _chart().addAxis({
+                id: data.id + '-axis',
+                min: data.min,
+                showEmpty: false,
+                title: {
+//                    align: 'high',
+                    text: data.name + ' ' + data.unit
+                },
+                //labels: {
+                //    formatter: function() {
+                //       return this.value + ' ' + data.unit;
+                //    }
+                    //style: {
+                    //   color: '#4572A7'
+                    //}
+                //},
+                opposite: false
+            }, true, true);
+      }
+      result = {
+        'name': data.name,
+        'type': data.type,
+        'data': data.data, //_mapData(data.data),
+        'yAxis': data.id + '-axis',
+        'data.marker.enabled': false,
+        'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
+        'pointInterval': data.pointInterval
+      }
+    } else {
+      result = {
+        'name': data.name,
+        'type': data.type,
+        'data': data.data, //_mapData(data.data),
+        // 'yAxis': name + '-axis',
+        'data.marker.enabled': false,
+        'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
+        'pointInterval': data.pointInterval
+      }
+    }
+		return result;
 	};
 	
 	var _mapData = function(data) {
@@ -316,24 +360,29 @@ highchartsUI = (function(highchartsUI) {
 				},
 				xAxis: {
           type: "datetime",    
-          dateTimeLabelFormats: {
-              day: '%H:%M'
-          },
+//          dateTimeLabelFormats: {
+//              day: '%H:%M'
+//          },
           //tickInterval: 3600 * 1000,
           tickPixelInterval: 50
         },
 				yAxis: {
+            
 						min: 0,
+//            id: 'initial-y-axis',
 						title: {
 								text: _options.yAxisTitle
-						}
+						},
+						labels: {
+              enabled: true
+            }
 				},
 				plotOptions: {
             line: {
                 showInLegend: false,
-                lineWidth: 2,
+                lineWidth: 10,
                 marker: {
-                    enabled: true,
+                    enabled: false,
                     states: {
                         hover: {
                             enabled: true
@@ -342,7 +391,7 @@ highchartsUI = (function(highchartsUI) {
                 }
             },
             spline: {
-                lineWidth: 2,
+                lineWidth: 3,
                 states: {
                     hover: {
                         lineWidth: 4
@@ -398,8 +447,22 @@ highchartsUI = (function(highchartsUI) {
 				tooltip: {
 						headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
 						pointFormat:  '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
-                          '<td style="padding:0"><b>{point.y:.1f}</b></td><td style="padding:0"><b>{point.text}</td></tr>',
+                          '<td style="padding:0"><b>{point.y:.1f}</b></td></tr>',
 						footerFormat: '</table>',
+						formatter: function() {
+              var p = '<span style="font-size:10px">' + this.points[0].key + '</span><table>';
+              // console.log(this);
+              for(var i = 0; i < this.points.length; i++) {
+                if(this.points[i].series.options.type != 'line')
+                  p += '<tr><td style="color:{'+ this.points[i].series.color +'};padding:0">' + this.points[i].series.name + ': </td><td style="padding:0"><b>' + Math.round(this.points[i].point.y * 100)/100 + '</b></td></tr>';
+              }
+              p += '</table>';
+              for(var i = 0; i < this.points.length; i++) {
+                if(this.points[i].series.options.type == 'line')
+                  p += '</br><b style="color:{'+ this.points[i].series.color +'};padding:0">' + this.points[i].series.name + '</b>';
+              }
+              return p;
+						},
 						shared: true,
 						useHTML: true
 				},
@@ -464,6 +527,8 @@ var ganttUI = (function(ganttUI) {
         _chart.redraw();
         console.log('Removing gantt complete', _chart.series.length);
       }
+      _series = []; 
+      _tasks = [];
     }
   };
   var _createGraph = function() {
@@ -501,9 +566,11 @@ var ganttUI = (function(ganttUI) {
         },
         tooltip: {
             formatter: function() {
-                return '<b>'+ _tasks[this.y].name + '</b><br/>' +
-                    Highcharts.dateFormat('%H:%M', this.point.options.from)  +
-                    ' - ' + Highcharts.dateFormat('%H:%M', this.point.options.to); 
+              var label = "";
+              if(typeof(this.point.label) != 'undefined') label = this.point.label;
+              return '<b>'+ _tasks[this.y].name + '</b><br/>' +
+                  Highcharts.dateFormat('%H:%M', this.point.options.from)  +
+                  ' - ' + Highcharts.dateFormat('%H:%M', this.point.options.to) + ' ' + label;
             }
         },
         plotOptions: {
@@ -527,7 +594,11 @@ var ganttUI = (function(ganttUI) {
   var _createSeries = function(tasks) {
     // re-structure the tasks into line seriesvar series = [];
     var series = [];
-    $.each(tasks.reverse(), function(i, task) {
+    var offset = 0;
+    if(typeof(_chart) != 'undefined')
+      offset = _chart.series.length;
+    console.log("offset", offset);
+    $.each(tasks, function(i, task) {
         var item = {
             name: task.name,
             data: []
@@ -535,13 +606,13 @@ var ganttUI = (function(ganttUI) {
         $.each(task.intervals, function(j, interval) {
             item.data.push({
                 x: interval.from,
-                y: i,
+                y: i + offset,
                 label: interval.label,
                 from: interval.from,
                 to: interval.to
             }, {
                 x: interval.to,
-                y: i,
+                y: i + offset,
                 from: interval.from,
                 to: interval.to
             });
@@ -588,9 +659,9 @@ var ganttUI = (function(ganttUI) {
 
 var bulletSparkUI = (function(weatherUI) {
 	var _init = function() {
-    var HTML = $('<div class="masonry-box"><table id="activity_variables"></table></div>');
+    var HTML = $('<div class="masonry-box activity_variables"><b>Activity variables</b></br><table id="activity_variables"></table></div>');
     $("#masonry-container").append(HTML).masonry('appended', HTML);
-		amplify.subscribe('update_bullet_chart', function(data) {
+		amplify.subscribe('bullet_chart', function(data) {
       console.log('update_bullet_chart spark', data.id, data.chart);
       $('#activity_table_row_' + data.id).remove();
 			var HTML = $(
@@ -616,13 +687,17 @@ var weatherUI = (function(weatherUI) {
 			console.log('Weather data for ' + summary.date.pretty, summary);
 			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 			var weekday = weekdays[Date.parse(data.history.date.pretty).getDay()];
-			var HTML = $('<div class="masonry-box weather_variables" id="weather_variables_'+ weekday +'"><b>Weather conditions (' + weekday + ')</b></br>' +
+			if($("#weather_variables-container").length == 0) {
+        var HTML = $('<div class="masonry-box weather_variables" id="weather_variables-container"></div>');
+        $("#masonry-container").append(HTML).masonry('appended', HTML);
+			}
+			var HTML = $('<div id="weather_variables_'+ weekday +'"><b>Weather conditions (' + weekday + ')</b></br>' +
         '<table><tr><td class="weatherdata_name">Temperature</td><td class="weatherdata_value">' + summary.meantempm + ' C</td><td><span id="temperature_sparkline_' + weekday + '"></span></td></tr>' +
         '<tr><td class="weatherdata_name">Dew P.T.</td><td class="weatherdata_value">' + summary.meandewptm + ' C</td><td><span id="dewptm_sparkline_' + weekday + '"></span></td></tr>' + 
         '<tr><td class="weatherdata_name">Pressure</td><td class="weatherdata_value">' + summary.meanpressurem + ' hPa</td><td><span id="pressure_sparkline_' + weekday + '"></span></td></tr>' + 
         '<tr><td class="weatherdata_name">Humidity</td><td class="weatherdata_value">' + summary.humidity + ' %</td><td><span id="humidity_sparkline_' + weekday + '"></span></td></tr></table>' +
         '</div>');
-			$("#masonry-container").append(HTML).masonry('appended', HTML);
+			$("#weather_variables-container").append(HTML);
       var o = data.history.observations;
       var temperature_sparkline = [];
       var pressure_sparkline = [];
@@ -663,36 +738,78 @@ var calendarUI = (function(calendarUI) {
       if(summary.length > SUMMARY_MAX_LENGTH) {
         var summary = events.summary.substring(0,SUMMARY_MAX_LENGTH) + '...';
       }
-			var HTML = $('<div class="masonry-box calendar_events" id="calendar_events_'+ etag +'">' + 
-        '<b>Calendar: ' + summary + ' (' + weekday + ')</b></br>' +
+      if($(".calendar_events-container").length == 0) {
+        var HTML = $('<div class="masonry-box calendar_events-container" id="calendar_events-container"></div>');
+        $("#masonry-container").append(HTML).masonry('appended', HTML);
+      }
+			var HTML = $('<div class="calendar_events" id="calendar_events_'+ etag +'">' + 
+        '<b>Calendar: ' + summary + ' (' + weekday + ')</b></br>' +        
         '<table id="calendar_events_'+ etag +'_table">'+
         '</table>' +
         '</div>');
-      $("#masonry-container").append(HTML).masonry('appended', HTML);
+      $("#calendar_events-container").append(HTML);
       if(typeof(events.items) != 'undefined') {
+        var result = [];
         for(var i = 0; i < events.items.length; i++) {
           if(typeof(events.items[i].start) != 'undefined' && typeof(events.items[i].start) != 'undefined') {
             console.log(i);
+            var start, startstr, end, endstr, duration;
             if(typeof(events.items[i].start.dateTime) != 'undefined' && typeof(events.items[i].start.dateTime) != 'undefined') {
-              var start = Date.parse(events.items[i].start.dateTime).toString("HH:mm") + ' - ';
-              var end = Date.parse(events.items[i].end.dateTime).toString("HH:mm");
+              start = Date.parse(events.items[i].start.dateTime);
+              startstr = start.toString("HH:mm") + ' - ';
+              end = Date.parse(events.items[i].end.dateTime); 
+              endstr = end.toString("HH:mm");
+              duration = end.getTime() - start.getTime();
             } else {
-              start = 'All day';
-              end = "";
+              startstr = 'All day';
+              endstr = "";
             }
             var SUMMARY_MAX_LENGTH = 25 ;
-            var summary = events.items[i].summary;
-            if(summary.length > SUMMARY_MAX_LENGTH) {
-              var summary = events.items[i].summary.substring(0,SUMMARY_MAX_LENGTH) + '...';
+            var eventSummary = events.items[i].summary;
+            if(eventSummary.length > SUMMARY_MAX_LENGTH) {
+              var eventSummary = events.items[i].summary.substring(0,SUMMARY_MAX_LENGTH) + '...';
             }
             var HTML = $(
-              '<tr><td class="cal_start">' + start +'</td>'+
-              '<td class="cal_end">' + end + '</td>' + 
-              '<td class="cal_summary">' + summary + '</td></tr>'
+              '<tr><td class="cal_start">' + startstr +'</td>'+
+              '<td class="cal_end">' + endstr + '</td>' + 
+              '<td class="cal_summary">' + eventSummary + '</td></tr>'
             );
             $('#calendar_events_' + etag + '_table').append(HTML);
+            // Show only non requrring items
+            if(duration != undefined && events.items[i].sequence == 0) {
+              // Adding items to timeline
+              //amplify.publish('new_timeline_dataset',
+              //  {
+              //    'name':'Cal. event ' + eventSummary,
+              //    'pointInterval': duration, 
+              //    'pointStart': start,
+              //    'data':[
+              //      [start.toString('yyyy-MM-ddTHH:mm:ss'), -50],
+              //      [end.toString('yyyy-MM-ddTHH:mm:ss'),   -50]
+              //     ],
+              //    'type':'line'
+              //  }
+              //);
+              result.push(
+                {
+                  from: start.getTime() - (start.getTimezoneOffset() * 60000), // time in UTC
+                  to: end.getTime() - (end.getTimezoneOffset() * 60000),
+                  label: eventSummary
+                }
+              );
+            }
           }
         }
+        var data = {
+          id: 'calendar_events' + etag,
+          tasks: [
+            {
+              name: 'Cal. ' + summary.substring(0,10) + '...',
+              intervals: result
+            }
+          ]
+        };
+        amplify.publish('new_gantt_chart', data);        
       } else {
         var HTML = $(
           '<tr><td class="cal_empty">No events today!</td></tr>'
@@ -743,24 +860,34 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _sleepCB = function(data) {
     $('.sleep_variables').remove();
 		var json = $.parseJSON(data);
+    // Sleep phases
+    var rem = [];
+    var deep = [];
+    var light = [];
+    var wake = [];
+    var noise = [];
+    var luminosity = [];
+    var actigram = [];
+    var pulse = [];
+    var start; 
+    var end;
 		for(var i = 0; i < json.data.length; i++) {
-			var data = json.data[i];
+			var data = json.data[i].beddit;
+			var common = json.data[i].common;
 			if(data == null || data.analysis_valid == null) {
 				console.log("No valid sleep data available on " + _currentday.toDateString(), data);
-				return;
+				continue;
 			}
 			if(data.analysis_valid == false) {
 				console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), data);
-				return;
+				continue;
 			} else {
 				console.log('Valid Beddit analysis available on ' + data.date, data);
+        if($('#sleep_variables-container').length == 0) {
+          var HTML = $('<div class="masonry-box sleep_variables" id="sleep_variables-container"></div>');
+          $('#masonry-container').append(HTML).masonry('appended', HTML);
+        }
 			}
-			
-			// Sleep phases
-      var rem = [];
-      var deep = [];
-      var light = [];
-      var wake = [];
       var j = 0;
       var stageDur = 0;
       var d1, d2;
@@ -805,61 +932,82 @@ var wellnessAPI =(function(wellnessAPI) {
           stageDur += 5;
         }
         // Implement parseStages function that gives an array of intervals
-      } 
-      var sleepStageData = { 
-        id: 'gantt_sleep_stages',
-        tasks: [
-          {
-            name: 'Light Sleep',
-            intervals: light
-          },
-          {
-            name: 'REM Sleep',
-            intervals: rem
-          },
-          {
-            name: 'Deep Sleep',
-            intervals: deep
-          },
-          {
-            name: 'Wake',
-            intervals: wake
-          }
-        ]
-      };
-      amplify.publish('new_gantt_chart', sleepStageData);
-						
-			var daynumber = Date.parse(data.date).getDay(); 
-			console.log('Publishing sleep data ', daynumber, weekdays[daynumber], i, json.data.length)
-			amplify.publish('new_timeline_dataset',
-        {'name':'Noise (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.noise_measurements[0][0]),'data':data.noise_measurements,'type':'area'});
-			amplify.publish('new_timeline_dataset',
-        {'name':'Luminosity (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.luminosity_measurements[0][0]),'data':data.luminosity_measurements,'type':'area'});
-			var dps = Date.parse(data.averaged_heart_rate_curve[0][0]);
-			console.log(dps.getTime());
-			amplify.publish('new_timeline_dataset',
-        {'name':'Heart rate (' + weekdays[daynumber] + ')','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(data.averaged_heart_rate_curve[0][0]),'data':data.averaged_heart_rate_curve,'type':'spline'});
-      
-      var HTML = $('<div class="masonry-box sleep_variables" id="sleep_variables_' + i + '">' +
-        '<b>Sleep variables (' + weekdays[daynumber] + ')</b></br>' +
-        '<table id="sleepdata_table_' + i + '"></table></div>');
-      $('#masonry-container').append(HTML).masonry('appended', HTML);
-      
-      $('#sleepdata_table_' + i ).append(
-        '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(data.sleep_efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_efficiency_sparkline_' + i + '">Loading..</span>--></td></tr>' +
-        '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_sleeping) + '</td><td class="sleepdata_unit">hours</td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">Loading..</span></td></tr>' +
-        '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_deep_sleep) + '</td><td class="sleepdata_unit">hours</td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-        '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_light_sleep) + '</td><td class="sleepdata_unit">hours</td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-        '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(data.time_in_bed) + '</td><td class="sleepdata_unit">hours</td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">Loading..</span></td></tr>' +
+      } 						
+			var daynumber = Date.parse(data.date).getDay();       
+      $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
+      $('#sleep_variables-container').append(
+        '<div style="display: inline-block;" class="sleep_variables-' + i + '">' +
+        '<table style="display: inline-block;" class="sleepdata_table" id="sleepdata_table_' + i + '">' +
+        '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
+        '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_efficiency_sparkline_' + i + '">Loading..</span>--></td></tr>' +
+        '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">Loading..</span></td></tr>' +
+        '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+        '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+        '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(data.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">Loading..</span></td></tr>' +
+        '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake * 60) + '</td><td class="sleepdata_unit"></td></tr>' +
+        '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep) + '</td><td class="sleepdata_unit"></td></tr>' +
         '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(data.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
-        '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + data.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>'
+        '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount + '</td><td class="sleepdata_unit">times</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+        '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + data.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+        '</table></div>'
       );
 	  
       $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(data.time_sleeping/3600 * 100) / 100],[Math.round(data.time_deep_sleep/3600 * 100) / 100],[ Math.round(data.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
       $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(data.time_in_bed/3600 * 100) / 100, Math.round((data.time_in_bed-data.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
       
       $('#masonry-container').masonry( 'reload' );
+      if(noise.length > 0) {
+        var nightstart = Date.parse(noise[0][0]).getTime();
+        var nightend = Date.parse(noise[noise.length - 1][0]).getTime();
+        var timezoneoffset = Date.parse(noise[noise.length - 1][0]).getTimezoneOffset();
+        var dayDurationMs = Math.abs(nightend - nightstart - (timezoneoffset * 60 * 1000));
+        var dur = dayDurationMs / (5*60*1000);
+        for(var k = 0; k < dur; k++) {
+          noise.push(null);
+          luminosity.push(null);
+          actigram.push(null);
+          pulse.push(null);
+        }
+      }
+      noise = noise.concat(data.noise_measurements);
+      luminosity = luminosity.concat(data.luminosity_measurements);
+      actigram = actigram.concat(data.minutely_actigram);
+      pulse = pulse.concat(data.averaged_heart_rate_curve);
 		}
+    amplify.publish('new_timeline_dataset',
+      {'name':'Noise','id':'noise','min':0,'unit':'dB','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
+    amplify.publish('new_timeline_dataset',
+      {'name':'Luminosity','id':'luminosity','min':0,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
+    amplify.publish('new_timeline_dataset',
+      {'name':'Actigram','id':'actigram','unit':'','min':0,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(actigram[0][0]),'data':actigram,'type':'spline'});
+    amplify.publish('new_timeline_dataset',
+      {'name':'Pulse','id':'pulse','min':null,'unit':'bpm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(pulse[0][0]),'data':pulse,'type':'spline'});
+
+
+		
+    var sleepStageData = { 
+      id: 'gantt_sleep_stages',
+      tasks: [
+        {
+          name: 'Wake',
+          intervals: wake
+        },  
+        {
+          name: 'Deep Sleep',
+          intervals: deep
+        },      
+        {
+          name: 'REM Sleep',
+          intervals: rem
+        },
+        {
+          name: 'Light Sleep',
+          intervals: light
+        }
+
+      ]
+    };
+    amplify.publish('new_gantt_chart', sleepStageData);
 	};
 
 	var _withingsCB = function(data) {
@@ -1031,15 +1179,16 @@ var wellnessAPI =(function(wellnessAPI) {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		for(var i = 0; i < userData.calendars.length; i++) {
       var url = 'calendar/id/' + userData.calendars[i] + '/events/' + daypath + '/';
-      var cacheValue = amplify.store(url);
+      var cacheValue; // = amplify.store(url); // TODO: there is an issue with the cache
       if(typeof(cacheValue) != 'undefined') {
         console.log("Found from local store " + url);
         var json = JSON.parse(cacheValue);
         amplify.publish('calendar_events', {'date': _currentday.toString("yyyy-MM-dd"), 'events': json});
       } else {
+        console.log("Requesting from server " + url);
         _getData(url, function(data) {
           var json = JSON.parse(data);
-          amplify.store(url, data);
+          amplify.store(url, data, { expires: 12*60*(60*1000*Math.random()) });
           amplify.publish('calendar_events', {'date': _currentday.toString("yyyy-MM-dd"), 'events': json});
         });
       }
@@ -1052,76 +1201,76 @@ var wellnessAPI =(function(wellnessAPI) {
 			var json = $.parseJSON(data);
 
 			if(json.data[0].activities != undefined) {
-				console.log("TODO: Handle activities");
 				var activityDay = Date.parse(json.data[0].date);
 				var year = activityDay.getFullYear();
 				var month = activityDay.getMonth();
 				var day = activityDay.getDate();
+				var result = [];
 				for(var i = 0; i < json.data[0].activities.length; i++) {
           var a = json.data[0].activities[i];
           var hour = parseInt(a.startTime.split(':')[0]);
           var minute = parseInt(a.startTime.split(':')[1]);
           var durMS = parseInt(a.duration);
           console.log("Publishing Activity", year, month, day, hour, minute, durMS);
+          result.push(
+            { // From-To pairs
+              from: Date.UTC(year, month, day, hour, minute),
+              to: Date.UTC(year, month, day, hour, minute, 0, durMS),
+              label: a.name.substring(0,15) + '...'
+            }
+          );
+          var activityTimeStamp = json.data[0].date.split('T')[0] + 'T' + json.data[0].activities[i].startTime;
+
+          //amplify.publish('new_timeline_dataset',
+          //  {'name':a.name.substring(0,6) + '...',
+          //  'type':'line','lineWidth':0,
+          //  'pointInterval': json.data[0].activities[i].duration, 
+          //  'pointStart': Date.parse(activityTimeStamp),
+          //  'data':[activityTimeStamp, 0],
+          //  'text':a.name}
+          //); 
+
+        }
+        if(result.length > 0) {
           var data = {
             id: 'activity_stages',
             tasks: [
               {
-                name: 'Activity',
-                intervals: [{ // From-To pairs
-                    from: Date.UTC(year, month, day, hour, minute),
-                    to: Date.UTC(year, month, day, hour, minute, 0, durMS),
-                    label: a.name.substring(0,6) + '...'
-                }]
+                name: 'Activities',
+                intervals: result
               }
             ]
           };
-          //amplify.publish('new_gantt_chart', data);
-          var activityTimeStamp = json.data[0].date.split('T')[0] + 'T' + json.data[0].activities[i].startTime;
-          amplify.publish('new_timeline_dataset',
-            {'name':a.name.substring(0,6) + '...',
-            'type':'line','lineWidth':0,
-            'pointInterval': json.data[0].activities[i].duration, 
-            'pointStart': Date.parse(activityTimeStamp),
-            'data':[activityTimeStamp, 0],
-            'text':a.name}
-          );
+          amplify.publish('new_gantt_chart', data);
         }
-
 			} else {
 				console.log("No activities data available on " + daypath, json);
 			}
 			if(json.data[0].goals != undefined && json.data[0].summary != undefined) {
-
-				// Publishing the values
-				amplify.publish('activity_floors', { 'value' : json.data[0].summary.floors, 'goal' : json.data[0].goals.floors })
-        amplify.publish('activity_calories', { 'value' : json.data[0].summary.activityCalories, 'goal' : json.data[0].goals.caloriesOut });
-        amplify.publish('activity_steps', { 'value' : json.data[0].summary.steps, 'goal' : json.data[0].goals.steps });
-        amplify.publish('activity_score', { 'value' : json.data[0].summary.activeScore, 'goal' : json.data[0].goals.activeScore });
         
-        goal = (json.data[0].goals.caloriesOut) / 1000;
-        value = (json.data[0].summary.activityCalories) / 1000;
-        var burnedcaloriesdata = {"title":"Calories burned","subtitle":"count in thousands","ranges":[goal*0.44,goal*0.75,goal*0.95],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
-        amplify.publish('update_bullet_chart', 
+        goal = (json.data[0].goals.caloriesOut);
+        value = (json.data[0].summary.activityCalories);
+        var burnedcaloriesdata = {"title":"Calories burned","subtitle":"","ranges":[Math.round(goal*0.44),Math.round(goal*0.75),Math.round(goal*0.95)],"measures":[value],"markers":[goal],"valuetxt":value};
+        amplify.publish('bullet_chart', 
           { 'id':'burnedcalories', 'chart': burnedcaloriesdata }
         );
         var goal, value;
-        goal = (json.data[0].goals.steps) /1000;
-        value = (json.data[0].summary.steps) / 1000;
-        var stepsdata = {"title":"Steps taken","subtitle":"count in thousands","ranges":[goal*0.35,goal*0.65,goal*0.85],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
-        amplify.publish('update_bullet_chart', 
+        goal = (json.data[0].goals.steps);
+        value = (json.data[0].summary.steps);
+        var stepsdata = {"title":"Steps taken","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
+        amplify.publish('bullet_chart', 
           { 'id':'steps', 'chart': stepsdata}
         );
         goal = (json.data[0].goals.floors);
         value = (json.data[0].summary.floors);
-        var floorsdata = {"title":"Floors climbed","subtitle":"count","ranges":[goal*0.35,goal*0.65,goal*0.85],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
-        amplify.publish('update_bullet_chart', 
+        var floorsdata = {"title":"Floors climbed","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
+        amplify.publish('bullet_chart', 
           { 'id':'floors', 'chart': floorsdata}
         );
-        goal = (json.data[0].goals.activeScore) / 100;
-        value = (json.data[0].summary.activeScore) / 100;
-        var activityscoredata = {"title":"Activity score","subtitle":"count in hundreds","ranges":[goal*0.35,goal*0.65,goal*0.85],"measures":[Math.min(value, goal)],"markers":[goal],"valuetxt":value};
-        amplify.publish('update_bullet_chart', 
+        goal = (json.data[0].goals.activeScore);
+        value = (json.data[0].summary.activeScore);
+        var activityscoredata = {"title":"Activity score","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
+        amplify.publish('bullet_chart', 
           { 'id':'activityscore', 'chart': activityscoredata}
         );
 
@@ -1137,7 +1286,7 @@ var wellnessAPI =(function(wellnessAPI) {
             mySteps.push(json.data[0].steps[i]);
         }
 				amplify.publish('new_timeline_dataset',
-          {'name':'Steps','type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
+          {'name':'Steps','id':'steps','min':0,'unit':'','type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
         );
 			} else {
 				console.log("No detailed activity data available on " + daypath, json);
@@ -1182,7 +1331,6 @@ var wellnessAPI =(function(wellnessAPI) {
         duration: 400
       }
     });
-		bulletChartUI.init();
 		bulletSparkUI.init();
 		weatherUI.init();
 		weatherAPI.getWeatherHistory(userData.address, _currentday);
@@ -1203,20 +1351,6 @@ var wellnessAPI =(function(wellnessAPI) {
 		if(userData.fitbit) {
 			_getFitbitActivityDataset();
 			$("#fitbit").css({"visibility":"visible"});
-
-      amplify.publish('new_bullet_chart', 
-        { 'id':'burnedcalories', 'chart': {"title":"Calories burned","subtitle":"count in thousands","ranges":[0.96096,1.6380000000000001,2.0748],"measures":[1.205],"markers":[2.184],"valuetxt":1.205} }
-      );			
-      amplify.publish('new_bullet_chart', 
-        { 'id':'steps', 'chart': {"title":"Steps taken","subtitle":"count in thousands","ranges":[4,6,8],"measures":[0],"markers":[10],"valuetxt":0} }
-      );
-      amplify.publish('new_bullet_chart', 
-        { 'id':'floors', 'chart': {"title":"Floors climbed","subtitle":"count","ranges":[4,6,8],"measures":[0],"markers":[10],"valuetxt":0} }
-      );
-      amplify.publish('new_bullet_chart', 
-        { 'id':'activityscore', 'chart': {"title":"Activity score","subtitle":"count in hundreds","ranges":[4,6,8],"measures":[0],"markers":[10],"valuetxt":0} }
-      );
-
 		}
 		else {
 			$("#fitbit").css({"display":"none"});
@@ -1237,7 +1371,7 @@ var wellnessAPI =(function(wellnessAPI) {
 				'end': _currentday.clone().clearTime().add({days:1,hours:6}),
 				'yAxisTitle':'',
 				'initSeries': [
-					{'type':'line','name':'Heart rate','data': [["2013-03-26T06:20:00", 0], ["2013-03-26T06:25:00", 0], ["2013-03-26T06:30:00", 0]]}
+					{'type':'line','name':'Pulse','data': [["2013-03-26T06:20:00", 0], ["2013-03-26T06:25:00", 0], ["2013-03-26T06:30:00", 0]]}
 				]
 			};
 			highchartsUI.init(options);
@@ -1271,7 +1405,7 @@ var wellnessAPI =(function(wellnessAPI) {
       _getCalendarData();
     }
 
-    $("div[id*=weather_variables]").remove();
+    $("div[id*=weather_variables-container]").remove();
 		weatherAPI.getWeatherHistory(userData.address, _currentday);
 		if(!Date.equals(Date.today(), _currentday.clone().clearTime()))
       weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
