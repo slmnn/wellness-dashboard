@@ -867,8 +867,9 @@ var wellnessAPI =(function(wellnessAPI) {
     var deep = [];
     var light = [];
     var wake = [];
-    var reallywake = [];
-    var asleep = [];
+    var fitbit_reallywake = [];
+    var fitbit_awake = [];
+    var fitbit_sleep = [];
     var noise = [];
     var luminosity = [];
     var actigram = [];
@@ -882,10 +883,11 @@ var wellnessAPI =(function(wellnessAPI) {
           $('#masonry-container').append(HTML).masonry('appended', HTML);
         }
         var common = json.data[i].common;
+        if(common.source == null) continue;
         var daynumber = Date.parse(common.date).getDay();       
         $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
         $('#sleep_variables-container').append(
-          '<div style="display: inline-block;" class="sleep_variables-' + i + '">' +
+          '<div style="display: inline-block; float: left;" class="sleep_variables-' + i + '">' +
           '<table style="display: inline-block;" class="sleepdata_table" id="sleepdata_table_' + i + '">' +
           '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
           '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_efficiency_sparkline_' + i + '">Loading..</span>--></td></tr>' +
@@ -912,21 +914,21 @@ var wellnessAPI =(function(wellnessAPI) {
           }
           if( fitbit.minuteData[j][1] !=  fitbit.minuteData[j-1][1]) {
             if( fitbit.minuteData[j-1][1] == '1') {
-              light.push({
+              fitbit_sleep.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
                   label: ''
               });
             }
             if( fitbit.minuteData[j-1][1] == '2') {
-              wake.push({
+              fitbit_awake.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
                   label: ''
               });
             }
             if( fitbit.minuteData[j-1][1] == '3') {
-              reallywake.push({
+              fitbit_reallywake.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
                   label: ''
@@ -1027,23 +1029,25 @@ var wellnessAPI =(function(wellnessAPI) {
       }
 		}
     amplify.publish('new_timeline_dataset',
-      {'name':'Noise','id':'noise','min':0,'unit':'dB','visible':false,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
-    amplify.publish('new_timeline_dataset',
-      {'name':'Luminosity','id':'luminosity','min':0,'visible':false,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
-    amplify.publish('new_timeline_dataset',
       {'name':'Actigram','id':'actigram','unit':'','visible':true,'min':0,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(actigram[0][0]),'data':actigram,'type':'spline'});
     amplify.publish('new_timeline_dataset',
       {'name':'Pulse','id':'pulse','min':null,'unit':'bpm','visible':true,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(pulse[0][0]),'data':pulse,'type':'spline'});
+    amplify.publish('new_timeline_dataset',
+      {'name':'Noise','id':'noise','min':0,'unit':'dB','visible':false,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
+    amplify.publish('new_timeline_dataset',
+      {'name':'Luminosity','id':'luminosity','min':0,'visible':false,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
 
     $('#masonry-container').masonry( 'reload' );
 		
 		var stages = [];
-		if(reallywake.length > 0) stages.push({name: 'Really wake', intervals: reallywake});		
+		if(fitbit_reallywake.length > 0) stages.push({name: 'Really wake', intervals: fitbit_reallywake});		
+		if(fitbit_awake.length > 0) stages.push({name: 'Movements', intervals: fitbit_awake});		
 		if(wake.length > 0) stages.push({name: 'Wake', intervals: wake});
 		if(deep.length > 0) stages.push({name: 'Deep Sleep', intervals: deep});
 		if(rem.length > 0) stages.push({name: 'REM', intervals: rem});
-		if(light.length > 0) stages.push({name: 'Asleep', intervals: light});
-
+		if(light.length > 0) stages.push({name: 'Light Sleep', intervals: light});
+		if(fitbit_sleep.length > 0) stages.push({name: 'Asleep', intervals: fitbit_sleep});		
+		
     var sleepStageData = { 
       id: 'gantt_sleep_stages',
       tasks: stages
@@ -1198,6 +1202,13 @@ var wellnessAPI =(function(wellnessAPI) {
    			}
 			}
 		).done(cb);
+	};
+
+	var _getWeatherData =	function(date) {
+		var daypath = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + (date.getDate());
+		_getData('weather/history/' + daypath + '/', function(data) {
+      amplify.publish('weather_history', JSON.parse(data));
+		});
 	};
 	
 	var _getWeightData = function() {
@@ -1374,9 +1385,13 @@ var wellnessAPI =(function(wellnessAPI) {
     });
 		bulletSparkUI.init();
 		weatherUI.init();
-		weatherAPI.getWeatherHistory(userData.address, _currentday);
+		//weatherAPI.getWeatherHistory(userData.address, _currentday);
+		//if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
+    //  weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
+    //}
+		_getWeatherData(_currentday);
 		if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
-      weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
+      _getWeatherData(_currentday.clone().add(1).days());
     }
     if(userData.calendars.length > 0) {
       calendarUI.init();
@@ -1447,9 +1462,10 @@ var wellnessAPI =(function(wellnessAPI) {
     }
 
     $("div[id*=weather_variables-container]").remove();
-		weatherAPI.getWeatherHistory(userData.address, _currentday);
-		if(!Date.equals(Date.today(), _currentday.clone().clearTime()))
-      weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
+		_getWeatherData(_currentday);
+		if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
+      _getWeatherData(_currentday.clone().add(1).days());
+    }
 	};
 
 	var _currentday;
@@ -1499,7 +1515,8 @@ var wellnessAPI =(function(wellnessAPI) {
 				} 
 			).done(
 				function(data) {
-					var json = $.parseJSON(data);
+          if(typeof(data) != 'object')
+            var json = $.parseJSON(data);
 					if(json.user_info.username) {
             userData.services = json.services_linked;
 						if(json.services_linked.indexOf('beddit') != -1) {

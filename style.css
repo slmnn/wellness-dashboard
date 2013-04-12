@@ -58,7 +58,7 @@ div#weather {
 }
 div.sleep_variables {
   text-align: center;
-  width: 300px;
+  width: 260px;
   margin: 4px;
   padding: 10px;
   float: left;
@@ -68,7 +68,7 @@ div.sleep_variables {
 div.weather_variables {
   text-align: center;
   margin-top: 10px;
-  width: 300px;
+  width: 260px;
   padding: 10px;
   margin: 4px;
   float: left;
@@ -77,7 +77,7 @@ div.weather_variables {
 }
 div.activity_variables {
   text-align: center;
-  width: 300px;
+  width: 260px;
   padding: 10px;
   margin: 4px;
   float: left;
@@ -93,7 +93,7 @@ td.activity_value {
 }
 div.calendar_events-container {
   text-align: center;
-  width: 300px;
+  width: 260px;
   padding: 10px;
   margin: 4px;
   float: left;
