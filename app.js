@@ -279,6 +279,7 @@ highchartsUI = (function(highchartsUI) {
         'name': data.name,
         'type': data.type,
         'data': data.data, //_mapData(data.data),
+        'visible': data.visible,
         'yAxis': data.id + '-axis',
         'data.marker.enabled': false,
         'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
@@ -289,6 +290,7 @@ highchartsUI = (function(highchartsUI) {
         'name': data.name,
         'type': data.type,
         'data': data.data, //_mapData(data.data),
+        'visible': data.visible,
         // 'yAxis': name + '-axis',
         'data.marker.enabled': false,
         'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
@@ -865,6 +867,8 @@ var wellnessAPI =(function(wellnessAPI) {
     var deep = [];
     var light = [];
     var wake = [];
+    var reallywake = [];
+    var asleep = [];
     var noise = [];
     var luminosity = [];
     var actigram = [];
@@ -872,142 +876,179 @@ var wellnessAPI =(function(wellnessAPI) {
     var start; 
     var end;
 		for(var i = 0; i < json.data.length; i++) {
-			var data = json.data[i].beddit;
-			var common = json.data[i].common;
-			if(data == null || data.analysis_valid == null) {
-				console.log("No valid sleep data available on " + _currentday.toDateString(), data);
-				continue;
-			}
-			if(data.analysis_valid == false) {
-				console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), data);
-				continue;
-			} else {
-				console.log('Valid Beddit analysis available on ' + data.date, data);
-        if($('#sleep_variables-container').length == 0) {
+      if(typeof(json.data[i].common) != 'undefined'){
+         if($('#sleep_variables-container').length == 0) {
           var HTML = $('<div class="masonry-box sleep_variables" id="sleep_variables-container"></div>');
           $('#masonry-container').append(HTML).masonry('appended', HTML);
         }
-			}
-      var j = 0;
-      var stageDur = 0;
-      var d1, d2;
-      for(j = 0; j < data.sleep_stages.length; j++) {
-        if(j == 0) {
-          stageDur += 5;
-          d1 = Date.parse(data.sleep_stages[j][0]);
-          continue;
-        }
-        if(data.sleep_stages[j][1] != data.sleep_stages[j-1][1]) {
-          if(data.sleep_stages[j-1][1] == 'D') {
-            deep.push({
-                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                label: ''
-            });
-          }
-          if(data.sleep_stages[j-1][1] == 'R') {
-            rem.push({
-                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                label: ''
-            });
-          }
-          if(data.sleep_stages[j-1][1] == 'L') {
-            light.push({
-                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                label: ''
-            });
-          }
-          if(data.sleep_stages[j-1][1] == 'W') {
-            wake.push({
-                from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                label: ''
-            });
-          }
-          stageDur = 5;
-          d1 = Date.parse(data.sleep_stages[j][0]);
-        } else {
-          stageDur += 5;
-        }
-        // Implement parseStages function that gives an array of intervals
-      } 						
-			var daynumber = Date.parse(data.date).getDay();       
-      $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
-      $('#sleep_variables-container').append(
-        '<div style="display: inline-block;" class="sleep_variables-' + i + '">' +
-        '<table style="display: inline-block;" class="sleepdata_table" id="sleepdata_table_' + i + '">' +
-        '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
-        '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_efficiency_sparkline_' + i + '">Loading..</span>--></td></tr>' +
-        '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">Loading..</span></td></tr>' +
-        '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-        '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(data.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-        '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(data.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">Loading..</span></td></tr>' +
-        '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake * 60) + '</td><td class="sleepdata_unit"></td></tr>' +
-        '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep) + '</td><td class="sleepdata_unit"></td></tr>' +
-        '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(data.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
-        '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount + '</td><td class="sleepdata_unit">times</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-        '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + data.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-        '</table></div>'
-      );
-	  
-      $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(data.time_sleeping/3600 * 100) / 100],[Math.round(data.time_deep_sleep/3600 * 100) / 100],[ Math.round(data.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
-      $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(data.time_in_bed/3600 * 100) / 100, Math.round((data.time_in_bed-data.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
+        var common = json.data[i].common;
+        var daynumber = Date.parse(common.date).getDay();       
+        $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
+        $('#sleep_variables-container').append(
+          '<div style="display: inline-block;" class="sleep_variables-' + i + '">' +
+          '<table style="display: inline-block;" class="sleepdata_table" id="sleepdata_table_' + i + '">' +
+          '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
+          '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_efficiency_sparkline_' + i + '">Loading..</span>--></td></tr>' +
+          '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">Loading..</span></td></tr>' +
+          '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake * 60) + '</td><td class="sleepdata_unit"></td></tr>' +
+          '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep) + '</td><td class="sleepdata_unit"></td></tr>' +
+          '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount + '</td><td class="sleepdata_unit">times</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+          '</table></div>'
+        );
+        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(common.minutesAsleep / 60 * 100) / 100],[Math.round(common.minutesAwake / 60 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+        
+      }
       
-      $('#masonry-container').masonry( 'reload' );
-      if(noise.length > 0) {
-        var nightstart = Date.parse(noise[0][0]).getTime();
-        var nightend = Date.parse(noise[noise.length - 1][0]).getTime();
-        var timezoneoffset = Date.parse(noise[noise.length - 1][0]).getTimezoneOffset();
-        var dayDurationMs = Math.abs(nightend - nightstart - (timezoneoffset * 60 * 1000));
-        var dur = dayDurationMs / (5*60*1000);
-        for(var k = 0; k < dur; k++) {
-          noise.push(null);
-          luminosity.push(null);
-          actigram.push(null);
-          pulse.push(null);
+      
+      if(json.data[i].fitbit != null) {
+        var fitbit = json.data[i].fitbit;
+        var stageDur = 0;
+        var d1, d2;
+        for(j = 0; j < fitbit.minuteData.length; j++) {
+          if(j == 0) {
+            stageDur += 5;
+            d1 = Date.parse(fitbit.minuteData[j][0]);
+            continue;
+          }
+          if( fitbit.minuteData[j][1] !=  fitbit.minuteData[j-1][1]) {
+            if( fitbit.minuteData[j-1][1] == '1') {
+              light.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            if( fitbit.minuteData[j-1][1] == '2') {
+              wake.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            if( fitbit.minuteData[j-1][1] == '3') {
+              reallywake.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            stageDur = 5;
+            d1 = Date.parse( fitbit.minuteData[j][0]);
+          } else {
+            stageDur += 5;
+          }
+          // Implement parseStages function that gives an array of intervals
         }
       }
-      noise = noise.concat(data.noise_measurements);
-      luminosity = luminosity.concat(data.luminosity_measurements);
-      actigram = actigram.concat(data.minutely_actigram);
-      pulse = pulse.concat(data.averaged_heart_rate_curve);
+      
+      
+      if(json.data[i].beddit != null) {
+        var beddit = json.data[i].beddit;
+        if(beddit.analysis_valid == false) {
+          console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), beddit);
+          continue;
+        } else {
+          console.log('Valid Beddit analysis available on ' + beddit.date, beddit);
+
+        }
+        var j = 0;
+        var stageDur = 0;
+        var d1, d2;
+        for(j = 0; j < beddit.sleep_stages.length; j++) {
+          if(j == 0) {
+            stageDur += 5;
+            d1 = Date.parse(beddit.sleep_stages[j][0]);
+            continue;
+          }
+          if(beddit.sleep_stages[j][1] != beddit.sleep_stages[j-1][1]) {
+            if(beddit.sleep_stages[j-1][1] == 'D') {
+              deep.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            if(beddit.sleep_stages[j-1][1] == 'R') {
+              rem.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            if(beddit.sleep_stages[j-1][1] == 'L') {
+              light.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            if(beddit.sleep_stages[j-1][1] == 'W') {
+              wake.push({
+                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                  label: ''
+              });
+            }
+            stageDur = 5;
+            d1 = Date.parse(beddit.sleep_stages[j][0]);
+          } else {
+            stageDur += 5;
+          }
+          // Implement parseStages function that gives an array of intervals
+        } 						
+        $('#sleepdata_table_' + i).append(
+          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">Loading..</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(beddit.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">Loading..</span></td></tr>' +
+          '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(beddit.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
+          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>'
+        );
+      
+        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(beddit.time_sleeping/3600 * 100) / 100],[Math.round(beddit.time_deep_sleep/3600 * 100) / 100],[ Math.round(beddit.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+        $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(beddit.time_in_bed/3600 * 100) / 100, Math.round((beddit.time_in_bed-beddit.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
+        
+        if(noise.length > 0) {
+          var nightstart = Date.parse(noise[0][0]).getTime();
+          var nightend = Date.parse(noise[noise.length - 1][0]).getTime();
+          var timezoneoffset = Date.parse(noise[noise.length - 1][0]).getTimezoneOffset();
+          var dayDurationMs = Math.abs(nightend - nightstart - (timezoneoffset * 60 * 1000));
+          var dur = dayDurationMs / (5*60*1000);
+          for(var k = 0; k < dur; k++) {
+            noise.push(null);
+            luminosity.push(null);
+            actigram.push(null);
+            pulse.push(null);
+          }
+        }
+        noise = noise.concat(beddit.noise_measurements);
+        luminosity = luminosity.concat(beddit.luminosity_measurements);
+        actigram = actigram.concat(beddit.minutely_actigram);
+        pulse = pulse.concat(beddit.averaged_heart_rate_curve);
+      }
 		}
     amplify.publish('new_timeline_dataset',
-      {'name':'Noise','id':'noise','min':0,'unit':'dB','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
+      {'name':'Noise','id':'noise','min':0,'unit':'dB','visible':false,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
     amplify.publish('new_timeline_dataset',
-      {'name':'Luminosity','id':'luminosity','min':0,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
+      {'name':'Luminosity','id':'luminosity','min':0,'visible':false,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
     amplify.publish('new_timeline_dataset',
-      {'name':'Actigram','id':'actigram','unit':'','min':0,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(actigram[0][0]),'data':actigram,'type':'spline'});
+      {'name':'Actigram','id':'actigram','unit':'','visible':true,'min':0,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(actigram[0][0]),'data':actigram,'type':'spline'});
     amplify.publish('new_timeline_dataset',
-      {'name':'Pulse','id':'pulse','min':null,'unit':'bpm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(pulse[0][0]),'data':pulse,'type':'spline'});
+      {'name':'Pulse','id':'pulse','min':null,'unit':'bpm','visible':true,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(pulse[0][0]),'data':pulse,'type':'spline'});
 
-
+    $('#masonry-container').masonry( 'reload' );
 		
+		var stages = [];
+		if(reallywake.length > 0) stages.push({name: 'Really wake', intervals: reallywake});		
+		if(wake.length > 0) stages.push({name: 'Wake', intervals: wake});
+		if(deep.length > 0) stages.push({name: 'Deep Sleep', intervals: deep});
+		if(rem.length > 0) stages.push({name: 'REM', intervals: rem});
+		if(light.length > 0) stages.push({name: 'Asleep', intervals: light});
+
     var sleepStageData = { 
       id: 'gantt_sleep_stages',
-      tasks: [
-        {
-          name: 'Wake',
-          intervals: wake
-        },  
-        {
-          name: 'Deep Sleep',
-          intervals: deep
-        },      
-        {
-          name: 'REM Sleep',
-          intervals: rem
-        },
-        {
-          name: 'Light Sleep',
-          intervals: light
-        }
-
-      ]
+      tasks: stages
     };
-    amplify.publish('new_gantt_chart', sleepStageData);
+    amplify.publish('new_gantt_chart', sleepStageData);    
 	};
 
 	var _withingsCB = function(data) {
@@ -1286,7 +1327,7 @@ var wellnessAPI =(function(wellnessAPI) {
             mySteps.push(json.data[0].steps[i]);
         }
 				amplify.publish('new_timeline_dataset',
-          {'name':'Steps','id':'steps','min':0,'unit':'','type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
+          {'name':'Steps','id':'steps','min':0,'unit':'','visible':true,'type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
         );
 			} else {
 				console.log("No detailed activity data available on " + daypath, json);
