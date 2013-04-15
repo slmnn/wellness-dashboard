@@ -876,7 +876,7 @@ var calendarUI = (function(calendarUI) {
             );
             $('#calendar_events_' + etag + '_table').append(HTML);
             // Show only non requrring items
-            if(duration != undefined && events.items[i].sequence == 0) {
+            if(duration != undefined) {
               // Adding items to timeline
               //amplify.publish('new_timeline_dataset',
               //  {
@@ -900,6 +900,11 @@ var calendarUI = (function(calendarUI) {
             }
           }
         }
+        console.log('Before sort', result);
+        result.sort(function(a,b) {
+          return a.from - b.from;
+        });
+        console.log('After sort', result);
         var data = {
           id: 'calendar_events' + etag,
           tasks: [
