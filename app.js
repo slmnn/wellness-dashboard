@@ -253,7 +253,7 @@ commonTooltipUI = (function(commonTooltipUI) {
 	};
   _syncTooltip = function (container, p) {
     var i=0, j=0, k=0, data;
-    for(i=0; i<charts.length; i++) {
+    for(i=0; i < charts.length; i++) {
       if(container.id != charts[i].container.id){
         for(; k < charts[i].series.length; k++) {
           data = charts[i].series[k].data;
@@ -265,6 +265,15 @@ commonTooltipUI = (function(commonTooltipUI) {
           }
         }
         charts[i].tooltip.hide();
+      } else {
+        for(; k < charts[i].series.length; k++) {
+          data = charts[i].series[k].data;
+          for(j=0; j<data.length; j++) {
+            if (data[j].x === p) {
+              charts[i].tooltip.refresh( charts[i].series[k].data[j] );
+            }
+          }
+        }
       }
     }
   };
@@ -507,9 +516,10 @@ highchartsUI = (function(highchartsUI) {
               for(var i = 0; i < this.series.chart.series.length; i++) {
                 if(this.series.chart.series[i].options.type != 'line') {
                   if(this.series.chart.series[i].visible === false) continue;
-                  var index;
-                  for(var j = 0; j < this.series.chart.series[i].points.length; j++)
+                  var index = undefined;
+                  for(var j = 0; j < this.series.chart.series[i].points.length; j++) {
                     if(this.series.chart.series[i].points[j].x === this.point.x) index = j;
+                  }
                   if(index !== undefined)
                     p += '<tr><td style="color:{'+ this.series.chart.series[i].color +'};padding:0">' + this.series.chart.series[i].name + ': </td><td style="padding:0"><b>' + Math.round(this.series.chart.series[i].points[index].y * 100)/100 + '</b></td></tr>';
                 }
