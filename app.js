@@ -239,6 +239,42 @@ var bulletChartUI = (function(bulletChartUI) {
   }
 }());
 
+commonTooltipUI = (function(commonTooltipUI) {
+	var charts = [];
+	var _setupTooltips = function (container) {
+    if(charts.indexOf(container) != -1) return;
+    charts.push($(container).highcharts());
+    $(charts).each(function(i, el){
+        $(el.container).mouseleave(function(){
+            for(i=0; i < charts.length; i++)
+                charts[i].tooltip.hide();
+        });
+    });
+	};
+  _syncTooltip = function (container, p) {
+    var i=0, j=0, k=0, data;
+    for(i=0; i<charts.length; i++) {
+      if(container.id != charts[i].container.id){
+        for(; k < charts[i].series.length; k++) {
+          data = charts[i].series[k].data;
+          for(j=0; j<data.length; j++) {
+            if (data[j].x === p) {
+                charts[i].tooltip.refresh( charts[i].series[k].data[j] );
+                return;
+            }
+          }
+        }
+        charts[i].tooltip.hide();
+      }
+    }
+  };
+  return {
+    setupTooltips: _setupTooltips,
+    syncTooltip: _syncTooltip
+  };
+
+}());
+
 highchartsUI = (function(highchartsUI) {
 	var _container = '#highchart';
 	
@@ -283,7 +319,14 @@ highchartsUI = (function(highchartsUI) {
         'yAxis': data.id + '-axis',
         'data.marker.enabled': false,
         'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
-        'pointInterval': data.pointInterval
+        'pointInterval': data.pointInterval,
+        point: {
+          events: {
+            mouseOver: function(){
+              commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
+            }
+          } 
+        }
       }
     } else {
       result = {
@@ -294,9 +337,16 @@ highchartsUI = (function(highchartsUI) {
         // 'yAxis': name + '-axis',
         'data.marker.enabled': false,
         'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
-        'pointInterval': data.pointInterval
+        'pointInterval': data.pointInterval,
+        point: {
+          events: {
+            mouseOver: function(){
+              commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
+            }
+          } 
+        }
       }
-    }
+    };
 		return result;
 	};
 	
@@ -452,24 +502,36 @@ highchartsUI = (function(highchartsUI) {
                           '<td style="padding:0"><b>{point.y:.1f}</b></td></tr>',
 						footerFormat: '</table>',
 						formatter: function() {
-              var p = '<span style="font-size:10px">' + this.points[0].key + '</span><table>';
+              var p = '<span style="font-size:10px">' + this.key + '</span><table>';
               // console.log(this);
-              for(var i = 0; i < this.points.length; i++) {
-                if(this.points[i].series.options.type != 'line')
-                  p += '<tr><td style="color:{'+ this.points[i].series.color +'};padding:0">' + this.points[i].series.name + ': </td><td style="padding:0"><b>' + Math.round(this.points[i].point.y * 100)/100 + '</b></td></tr>';
+              for(var i = 0; i < this.series.chart.series.length; i++) {
+                if(this.series.chart.series[i].options.type != 'line') {
+                  if(this.series.chart.series[i].visible === false) continue;
+                  var index;
+                  for(var j = 0; j < this.series.chart.series[i].points.length; j++)
+                    if(this.series.chart.series[i].points[j].x === this.point.x) index = j;
+                  if(index !== undefined)
+                    p += '<tr><td style="color:{'+ this.series.chart.series[i].color +'};padding:0">' + this.series.chart.series[i].name + ': </td><td style="padding:0"><b>' + Math.round(this.series.chart.series[i].points[index].y * 100)/100 + '</b></td></tr>';
+                }
               }
               p += '</table>';
-              for(var i = 0; i < this.points.length; i++) {
-                if(this.points[i].series.options.type == 'line')
-                  p += '</br><b style="color:{'+ this.points[i].series.color +'};padding:0">' + this.points[i].series.name + '</b>';
-              }
+              //for(var i = 0; i < this.series.points.length; i++) {
+                if(this.series.options.type == 'line')
+                  p += '</br><b style="color:{'+ this.series.color +'};padding:0">' + this.series.name + '</b>';
+             // }
               return p;
 						},
-						shared: true,
+						crosshairs: {
+                width: 2,
+                color: 'gray',
+                dashStyle: 'shortdot'
+            },
+			//			shared: true,
 						useHTML: true
 				},
 				series: _options.initSeries
 		});
+		commonTooltipUI.setupTooltips(_container);
 	};
 	
 	var _chart = function() {
@@ -570,9 +632,14 @@ var ganttUI = (function(ganttUI) {
             formatter: function() {
               var label = "";
               if(typeof(this.point.label) != 'undefined') label = this.point.label;
-              return '<b>'+ _tasks[this.y].name + '</b><br/>' +
+              return '<b>'+ this.series.name + '</b><br/>' +
                   Highcharts.dateFormat('%H:%M', this.point.options.from)  +
                   ' - ' + Highcharts.dateFormat('%H:%M', this.point.options.to) + ' ' + label;
+            },
+            crosshairs: {
+                width: 2,
+                color: 'gray',
+                dashStyle: 'shortdot'
             }
         },
         plotOptions: {
@@ -592,6 +659,7 @@ var ganttUI = (function(ganttUI) {
         },
         series: _series
     });
+    commonTooltipUI.setupTooltips('#' + _parentDIV);
   };
   var _createSeries = function(tasks) {
     // re-structure the tasks into line seriesvar series = [];
@@ -603,7 +671,14 @@ var ganttUI = (function(ganttUI) {
     $.each(tasks, function(i, task) {
         var item = {
             name: task.name,
-            data: []
+            data: [],
+            point: {
+              events: {
+                mouseOver: function(){
+                  commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
+                }
+              }
+            } 
         };
         $.each(task.intervals, function(j, interval) {
             item.data.push({
@@ -612,18 +687,41 @@ var ganttUI = (function(ganttUI) {
                 label: interval.label,
                 from: interval.from,
                 to: interval.to
-            }, {
+            });
+            
+            // add some stuff between start and end
+            var step = 5 * 60 * 1000; // 5 minutes
+            var pointtime = interval.from + step;
+            while(pointtime < interval.to) {
+              item.data.push({
+                x: pointtime,
+                y: i + offset,
+                from: interval.from,
+                to: interval.to
+              });
+              pointtime += step;
+            }
+            
+            item.data.push({
                 x: interval.to,
                 y: i + offset,
                 from: interval.from,
                 to: interval.to
-            });
+            });            
             
             // add a null value between intervals
             if (task.intervals[j + 1]) {
+              pointtime = interval.to + step;
+              while(pointtime < task.intervals[j + 1].from) {
                 item.data.push(
-                    [(interval.to + task.intervals[j + 1].from) / 2, null]
+                    [pointtime, null]
                 );
+                pointtime += step;
+              }
+            } else {
+              //item.data.push(
+              //    [interval.to + step, null]
+              //);
             }
         });
         series.push(item); 
@@ -635,7 +733,7 @@ var ganttUI = (function(ganttUI) {
     var newItem = _createSeries(task);
     _series = _series.concat(newItem);
     for(var i = 0; i < newItem.length; i++) {
-      _chart.addSeries(newItem[i], false);
+      _chart.addSeries(newItem[i], true);
       _chart.redraw();
 		}
   }
@@ -904,6 +1002,9 @@ var wellnessAPI =(function(wellnessAPI) {
       
       if(json.data[i].fitbit != null) {
         var fitbit = json.data[i].fitbit;
+        // Push one bogus stage to the end. Parser needs to see change in stage
+        // value to make a push to the array.
+        fitbit.minuteData.push(['0000-00-00T00:00:00', 'X']);
         var stageDur = 0;
         var d1, d2;
         for(j = 0; j < fitbit.minuteData.length; j++) {
@@ -953,6 +1054,9 @@ var wellnessAPI =(function(wellnessAPI) {
           console.log('Valid Beddit analysis available on ' + beddit.date, beddit);
 
         }
+        // Push one bogus stage to the end. Parser needs to see change in stage
+        // value to make a push to the array.
+        beddit.sleep_stages.push(['0000-00-00T00:00:00', 'X']);
         var j = 0;
         var stageDur = 0;
         var d1, d2;
@@ -1012,10 +1116,10 @@ var wellnessAPI =(function(wellnessAPI) {
         if(noise.length > 0) {
           var nightstart = Date.parse(noise[0][0]).getTime();
           var nightend = Date.parse(noise[noise.length - 1][0]).getTime();
-          var timezoneoffset = Date.parse(noise[noise.length - 1][0]).getTimezoneOffset();
-          var dayDurationMs = Math.abs(nightend - nightstart - (timezoneoffset * 60 * 1000));
+          var dayDurationMs = 24 * 60 * 60 * 1000 - (nightend - nightstart);
           var dur = dayDurationMs / (5*60*1000);
-          for(var k = 0; k < dur; k++) {
+          console.log(Date.parse(noise[0][0]), Date.parse(noise[noise.length - 1][0]), 'Day duration seems to be ' + secondsToString(dur*60*5)); 
+          for(var k = 0; k < dur - 1; k++) {
             noise.push(null);
             luminosity.push(null);
             actigram.push(null);
@@ -1040,13 +1144,13 @@ var wellnessAPI =(function(wellnessAPI) {
     $('#masonry-container').masonry( 'reload' );
 		
 		var stages = [];
-		if(fitbit_reallywake.length > 0) stages.push({name: 'Really wake', intervals: fitbit_reallywake});		
-		if(fitbit_awake.length > 0) stages.push({name: 'Movements', intervals: fitbit_awake});		
+		if(fitbit_reallywake.length > 0) stages.push({name: 'Moving a lot', intervals: fitbit_reallywake});		
+		if(fitbit_awake.length > 0) stages.push({name: 'Moving a little', intervals: fitbit_awake});
+		if(fitbit_sleep.length > 0) stages.push({name: 'Still', intervals: fitbit_sleep});		
 		if(wake.length > 0) stages.push({name: 'Wake', intervals: wake});
 		if(deep.length > 0) stages.push({name: 'Deep Sleep', intervals: deep});
 		if(rem.length > 0) stages.push({name: 'REM', intervals: rem});
 		if(light.length > 0) stages.push({name: 'Light Sleep', intervals: light});
-		if(fitbit_sleep.length > 0) stages.push({name: 'Asleep', intervals: fitbit_sleep});		
 		
     var sleepStageData = { 
       id: 'gantt_sleep_stages',
