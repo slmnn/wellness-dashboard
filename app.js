@@ -246,8 +246,9 @@ commonTooltipUI = (function(commonTooltipUI) {
     charts.push($(container).highcharts());
     $(charts).each(function(i, el){
         $(el.container).mouseleave(function(){
-            for(i=0; i < charts.length; i++)
-                charts[i].tooltip.hide();
+            for(i=0; i < charts.length; i++) {
+              charts[i].tooltip.hide();
+            }        
         });
     });
 	};
@@ -255,18 +256,20 @@ commonTooltipUI = (function(commonTooltipUI) {
     var i=0, j=0, k=0, data;
     for(i=0; i < charts.length; i++) {
       if(container.id != charts[i].container.id){
-        for(; k < charts[i].series.length; k++) {
+        for(k=0; k < charts[i].series.length; k++) {
           data = charts[i].series[k].data;
           for(j=0; j<data.length; j++) {
             if (data[j].x === p) {
-                charts[i].tooltip.refresh( charts[i].series[k].data[j] );
-                return;
+
+              charts[i].tooltip.refresh( charts[i].series[k].data[j] );
+              // charts[i].series[k].tooltipOptions.formatter = formatter;
+              return;
             }
           }
         }
         charts[i].tooltip.hide();
       } else {
-        for(; k < charts[i].series.length; k++) {
+        for(k=0; k < charts[i].series.length; k++) {
           data = charts[i].series[k].data;
           for(j=0; j<data.length; j++) {
             if (data[j].x === p) {
@@ -329,9 +332,9 @@ highchartsUI = (function(highchartsUI) {
         'data.marker.enabled': false,
         'pointStart': Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()),
         'pointInterval': data.pointInterval,
-        point: {
-          events: {
-            mouseOver: function(){
+        'point': {
+          'events': {
+            'mouseOver': function(){
               commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
             }
           } 
@@ -506,31 +509,7 @@ highchartsUI = (function(highchartsUI) {
             }
         },
 				tooltip: {
-						headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
-						pointFormat:  '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
-                          '<td style="padding:0"><b>{point.y:.1f}</b></td></tr>',
-						footerFormat: '</table>',
-						formatter: function() {
-              var p = '<span style="font-size:10px">' + this.key + '</span><table>';
-              // console.log(this);
-              for(var i = 0; i < this.series.chart.series.length; i++) {
-                if(this.series.chart.series[i].options.type != 'line') {
-                  if(this.series.chart.series[i].visible === false) continue;
-                  var index = undefined;
-                  for(var j = 0; j < this.series.chart.series[i].points.length; j++) {
-                    if(this.series.chart.series[i].points[j].x === this.point.x) index = j;
-                  }
-                  if(index !== undefined)
-                    p += '<tr><td style="color:{'+ this.series.chart.series[i].color +'};padding:0">' + this.series.chart.series[i].name + ': </td><td style="padding:0"><b>' + Math.round(this.series.chart.series[i].points[index].y * 100)/100 + '</b></td></tr>';
-                }
-              }
-              p += '</table>';
-              //for(var i = 0; i < this.series.points.length; i++) {
-                if(this.series.options.type == 'line')
-                  p += '</br><b style="color:{'+ this.series.color +'};padding:0">' + this.series.name + '</b>';
-             // }
-              return p;
-						},
+						formatter: _tooltipFormatter,
 						crosshairs: {
                 width: 2,
                 color: 'gray',
@@ -543,6 +522,31 @@ highchartsUI = (function(highchartsUI) {
 		});
 		commonTooltipUI.setupTooltips(_container);
 	};
+	
+	var _tooltipFormatter = function() {
+              var p = '<span style="font-size:10px">' + this.key + '</span><table>';
+              // console.log(this);
+              for(var i = 0; i < this.series.chart.series.length; i++) {
+                if(this.series.chart.series[i].options.type != 'line') {
+                  if(this.series.chart.series[i].visible === false) continue;
+                  var index = -1;
+                  for(var j = 0; j < this.series.chart.series[i].points.length; j++) {
+                    if(this.series.chart.series[i].points[j].x === this.point.x) index = j;
+                  }
+                  if(index !== -1) {
+                    p += '<tr><td style="color:{'+ this.series.chart.series[i].color +'};padding:0">' + 
+                      this.series.chart.series[i].name + ': </td><td style="padding:0"><b>' + 
+                      Math.round(this.series.chart.series[i].points[index].y * 100) / 100 + '</b></td></tr>';
+                  }
+                }
+              }
+              p += '</table>';
+              //for(var i = 0; i < this.series.points.length; i++) {
+                if(this.series.options.type == 'line')
+                  p += '</br><b style="color:{'+ this.series.color +'};padding:0">' + this.series.name + '</b>';
+             // }
+              return p;
+						}
 	
 	var _chart = function() {
 		return $(_container).highcharts();
@@ -639,12 +643,30 @@ var ganttUI = (function(ganttUI) {
             enabled: false
         },
         tooltip: {
+            useHTML: true,
             formatter: function() {
               var label = "";
-              if(typeof(this.point.label) != 'undefined') label = this.point.label;
-              return '<b>'+ this.series.name + '</b><br/>' +
-                  Highcharts.dateFormat('%H:%M', this.point.options.from)  +
-                  ' - ' + Highcharts.dateFormat('%H:%M', this.point.options.to) + ' ' + label;
+              if(typeof(this.point.label) != 'undefined') {
+                label = this.point.label;
+              }
+              var result = "<table>";
+              var allSeries = this.series.chart.series.reverse();
+              for(var i = 0; i < allSeries.length; i++) {
+                for(var k = 0; k < allSeries[i].points.length; k++) {
+                  if(allSeries[i].points[k].options.from <= this.x && allSeries[i].points[k].options.to >= this.x && allSeries[i].points[k].y !== null) {
+                    result += '<tr><td><b>'+ allSeries[i].name + '</b></td><td>' +
+                      Highcharts.dateFormat('%H:%M', allSeries[i].points[k].options.from)  +
+                      ' - ' + Highcharts.dateFormat('%H:%M', allSeries[i].points[k].options.to) + '</td>';
+                    if(this.series._i === allSeries[i]._i)
+                      result += '<td>' + label + '</td></tr>';
+                    else 
+                      result += '<td></td></tr>';
+                    break;
+                  }
+                } 
+              }
+              result += '</table>';
+              return result;
             },
             crosshairs: {
                 width: 2,
