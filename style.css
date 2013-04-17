@@ -65,6 +65,15 @@ div.sleep_variables {
   background: #fff; font: 12px sans-serif;
   overflow:hidden;
 }
+div#analysis-container {
+  text-align: center;
+  width: 260px;
+  margin: 4px;
+  padding: 10px;
+  float: left;
+  background: #fff; font: 12px sans-serif;
+  overflow:hidden;
+}
 div.weather_variables {
   text-align: center;
   margin-top: 10px;

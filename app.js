@@ -782,9 +782,17 @@ var bulletSparkUI = (function(weatherUI) {
 		amplify.subscribe('activity_piechart', function(data) {
       $('#activity_piechart_' + data.id).remove();
 			var HTML = $(
-        '<div id="activity_piechart_' + data.id + '">' + data.title + '<br /><span id="activity_sparkline_pie_' + data.id + '"></span></div>'
+        '<div id="activity_piechart_' + data.id + '"><b>' + data.title + '</b><br />'+
+        '<table id="activity_piechart_table_' + data.id + '" style="text-align: left;"></table>' +
+        '</div>'
       );
 			$('#activity_piechart').append(HTML);
+			HTML = "";
+			for(var i = 0; i < data.chart.length; i++) {
+        if(i == 0) HTML += '<tr><td rowspan="' + data.chart.length + '"><span id="activity_sparkline_pie_' + data.id + '"></span></td><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
+        else HTML += '<tr><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
+			}
+			$('#activity_piechart_table_' + data.id).append(HTML);
       $('#activity_sparkline_pie_' + data.id).sparkline(data.chart, {type: 'pie', width:'50px', height: '50px', tooltipFormat: '<span style="color: {{color}}">&#9679;</span> {{offset:names}} ({{percent.1}}%)',
         'tooltipValueLookups': {
             'names': data.names
@@ -795,6 +803,40 @@ var bulletSparkUI = (function(weatherUI) {
 	return {
 		init: _init
 	}
+}());
+
+var analysisUI = (function(analysisUI) {
+  var _init = function() {
+    $("#analysis-container").remove();
+    amplify.subscribe('analysis_available', function(d) {
+      if($('#analysis_available_' + d.type).length == 0) {
+        $("#analysis-container").append('<div id="analysis_available_' + d.type + '"  style="margin-top: 10px;"><b>' + d.type + '</b><br /><table id="analysis_available_table_' + d.type + '"></table></div>');
+      }
+      var HTML = '<tr><td>' + d.name + '</td><td><b>' + d.value + '</b></td></tr>';
+      $("#analysis_available_table_" + d.type).append(HTML);
+    });
+    amplify.subscribe('analysis_possible', function(d) {
+      if($('#analysis_possible_' + d.type).length == 0) {
+        var HTML = '<div id="analysis_possible_' + d.id + '" style="margin-top: 10px;"></div>';
+        $("#analysis-container").append(HTML);
+      }
+      $("#analysis_possible_" + d.id).append(
+        '<a href="#" data-rel="dialog" onClick="runtimePopup(\''+ d.path +'\', function() {  } );">' + d.message + '</a><br/>'
+      );
+    });
+    if($("#analysis-container").length == 0) {
+      var HTML = $('<div class="masonry-box analysis-container" id="analysis-container"><b>Wellness Analysis</b></div>');
+      $("#masonry-container").append(HTML).masonry('appended', HTML);
+    }
+  }
+  var _clear = function() {
+    $("#analysis-container").empty();
+    $("#analysis-container").append('<b>Wellness Analysis</b>');
+  }
+  return {
+    init: _init,
+    clear: _clear
+  }
 }());
 
 var weatherUI = (function(weatherUI) {
@@ -1370,9 +1412,9 @@ var wellnessAPI =(function(wellnessAPI) {
             'series': [{
               'name': 'SPB',
               'data': [value],
-              'dial': { 'radius' : '90%' },
+              'dial': { 'radius' : '90%', 'borderWidth': 1, 'backgroundColor': 'brown', 'borderColor': 'black' },
               'tooltip': {
-                  'valueSuffix': ' mmHg'
+                  'valueSuffix': 'mmHg'
               },
               'dataLabels': {
                 'borderWidth': 0,
@@ -1385,9 +1427,9 @@ var wellnessAPI =(function(wellnessAPI) {
               'name': 'DPB',
               'yAxis': 1,
               'data': [Math.round(json.data[0].latest.diasPressure.value * 10) / 10],
-              'dial': { 'radius' : '76%' },
+              'dial': { 'radius' : '76%', 'borderWidth': 1, 'backgroundColor': 'blue', 'borderColor': 'black'  },
               'tooltip': {
-                  'valueSuffix': ' mmHg'
+                  'valueSuffix': 'mmHg'
               },
               'dataLabels': {
                 'enabled': false,
@@ -1496,6 +1538,32 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _getFitbitSummaryData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('fitbit/api/activities/' + daypath + '/', _fitbitSummaryCB);
+	};
+	
+  var _getAnalysisData =	function() {
+    analysisUI.clear();
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		_getData('api/analysis/' + daypath + '/', function(data) {
+      var analysis = JSON.parse(data);
+      for(var i = 0; i < analysis.required_user_action.length; i++) {
+        var act = analysis.required_user_action[i];
+        amplify.publish('analysis_possible', {
+          'id': act.id,
+          'path':'http://wellness.cs.tut.fi' + act.path,
+          'message':act.message,
+          'type': capitaliseFirstLetter(act.type)
+        });
+      }
+      for(var i = 0; i < analysis.latest.length; i++) {
+        var ana = analysis.latest[i];
+        amplify.publish('analysis_available', {
+          'id': ana.id,
+          'type': capitaliseFirstLetter(ana.type),
+          'name': capitaliseFirstLetter(ana.name),
+          'value': ana.value
+        });
+      }
+		});
 	};
 
 	var _getCalendarData = function() {
@@ -1611,15 +1679,25 @@ var wellnessAPI =(function(wellnessAPI) {
           else strNames += '"' + j + '":"' + dNames[j] + '"}';
         }
         amplify.publish('activity_piechart', 
-          { 'id':'distances', 'chart': dValues, 'names': JSON.parse(strNames), 'title':'Distances'}
+          { 
+            'id':'distances', 
+            'unit':'km', 
+            'chart': dValues, 
+            'names': JSON.parse(strNames), 
+            'title':'Distances',
+            'formatter': function(a) { return Math.round(a * 100) / 100; }
+          }
         );
         
         var s = json.data[0].summary;
         amplify.publish('activity_piechart', 
-          { 'id':'activityminutes', 
-          'chart': [s.veryActiveMinutes, s.fairlyActiveMinutes, s.lightlyActiveMinutes, s.sedentaryMinutes],
-          'names':{0:'Very active',1:'Fairly active',2:'Lightly active',3:'Sedentary'},
-          'title':'Activity types'
+          { 
+            'id':'activityminutes', 
+            'chart': [s.veryActiveMinutes, s.fairlyActiveMinutes, s.lightlyActiveMinutes, s.sedentaryMinutes],
+            'unit':'',
+            'names':{0:'Very active',1:'Moderately active',2:'Lightly active',3:'Sedentary'},
+            'title':'Activity times',
+            'formatter': function(a) { return secondsToString(a * 60); }
           }
         );
 
@@ -1729,7 +1807,11 @@ var wellnessAPI =(function(wellnessAPI) {
 			};
 			highchartsUI.init(options);
 			highchartsUI.clear();
+			
 			ganttUI.init();
+			
+			analysisUI.init();
+			_getAnalysisData();
 		}
 	};
 
@@ -1739,6 +1821,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		if(userData.fitbit || userData.beddit) {
       highchartsUI.clear();
       ganttUI.clear();
+      _getAnalysisData();
 		}
 		if(userData.beddit) {
      	_getSleepData();
@@ -2016,3 +2099,34 @@ resizeCanvas = function (id, height){
     canvas.height = height;
   }
 };
+
+function capitaliseFirstLetter(string)
+{
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function runtimePopup(path, popupafterclose) {
+  var maxWidth = window.innerWidth * 0.8;
+  var maxHeight = window.innerHeight * 0.8;
+  var template = "<div data-role='popup' class='ui-content messagePopup' style='max-width:" + maxWidth + "px;'>" 
+      + "<a href='#' data-role='button' data-theme='g' data-icon='delete' data-iconpos='notext' " 
+      + " class='ui-btn-right closePopup'>Close</a> <span> " 
+      + "<iframe src='" + path + "' style='overflow:hidden; height:" + maxHeight + "; width:" + maxWidth + ";' height='" + maxHeight + "' width='" + maxWidth + "' seamless></iframe></div>";
+  
+  popupafterclose = popupafterclose ? popupafterclose : function () {};
+ 
+  $.mobile.ajaxEnabled = false;
+  $.mobile.activePage.append(template).trigger("create");
+ 
+  $.mobile.activePage.find(".closePopup").bind("tap", function (e) {
+    $.mobile.activePage.find(".messagePopup").popup("close");
+  });
+ 
+  $.mobile.activePage.find(".messagePopup").popup({ dismissible: false, history: false }).popup("open").bind({
+    popupafterclose: function () {
+      $(this).unbind("popupafterclose").remove();
+      popupafterclose();
+      $.mobile.ajaxEnabled = true;
+    }
+  });
+}
