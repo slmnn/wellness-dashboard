@@ -764,7 +764,7 @@ var ganttUI = (function(ganttUI) {
 
 var bulletSparkUI = (function(weatherUI) {
 	var _init = function() {
-    var HTML = $('<div class="masonry-box activity_variables"><b>Activity variables</b></br><table id="activity_variables"></table><div id="activity_piechart"></div></div>');
+    var HTML = $('<div class="masonry-box activity_variables"><b>Activity variables</b></br><table id="activity_variables" style="text-align: left; width:90%;"></table><div id="activity_piechart"></div></div>');
     $("#masonry-container").append(HTML).masonry('appended', HTML);
 		amplify.subscribe('bullet_chart', function(data) {
       console.log('update_bullet_chart spark', data.id, data.chart);
@@ -783,7 +783,7 @@ var bulletSparkUI = (function(weatherUI) {
       $('#activity_piechart_' + data.id).remove();
 			var HTML = $(
         '<div id="activity_piechart_' + data.id + '"><b>' + data.title + '</b><br />'+
-        '<table id="activity_piechart_table_' + data.id + '" style="text-align: left;"></table>' +
+        '<table id="activity_piechart_table_' + data.id + '" style="text-align: left; width:90%;"></table>' +
         '</div>'
       );
 			$('#activity_piechart').append(HTML);
