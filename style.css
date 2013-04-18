@@ -39,6 +39,11 @@ span.gaugetext {
 	font: 12px sans-serif;
 	font-weight: bold;
 }
+div#gauge-container {
+  float: left;
+  width: 130px;
+  margin: 4px;
+}
 div#gaugewrapper {
 /*	display:inline-block; */
   background: #fff; font: 12px sans-serif;

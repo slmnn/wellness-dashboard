@@ -810,9 +810,9 @@ var analysisUI = (function(analysisUI) {
     $("#analysis-container").remove();
     amplify.subscribe('analysis_available', function(d) {
       if($('#analysis_available_' + d.type).length == 0) {
-        $("#analysis-container").append('<div id="analysis_available_' + d.type + '"  style="margin-top: 10px;"><b>' + d.type + '</b><br /><table id="analysis_available_table_' + d.type + '"></table></div>');
+        $("#analysis-container").append('<div id="analysis_available_' + d.type + '"  style="margin-top: 10px;"><b>' + d.type + '</b><br /><table id="analysis_available_table_' + d.type + '" style="width: 90%"></table></div>');
       }
-      var HTML = '<tr><td>' + d.name + '</td><td><b>' + d.value + '</b></td></tr>';
+      var HTML = '<tr><td style="align: left;">' + d.name + '</td><td style="align: right;"><b>' + d.value + '</b></td><td style="align: right;">' + d.date + '</td></tr>';
       $("#analysis_available_table_" + d.type).append(HTML);
     });
     amplify.subscribe('analysis_possible', function(d) {
@@ -1549,7 +1549,7 @@ var wellnessAPI =(function(wellnessAPI) {
         var act = analysis.required_user_action[i];
         amplify.publish('analysis_possible', {
           'id': act.id,
-          'path':'http://wellness.cs.tut.fi' + act.path,
+          'path':'http://wellness.cs.tut.fi' + act.path + '?dashboard=true',
           'message':act.message,
           'type': capitaliseFirstLetter(act.type)
         });
@@ -1560,7 +1560,8 @@ var wellnessAPI =(function(wellnessAPI) {
           'id': ana.id,
           'type': capitaliseFirstLetter(ana.type),
           'name': capitaliseFirstLetter(ana.name),
-          'value': ana.value
+          'value': ana.value,
+          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
         });
       }
 		});
@@ -1673,10 +1674,11 @@ var wellnessAPI =(function(wellnessAPI) {
           dNames.push(d[j].activity);
           dValues.push(d[j].distance);
         }
+        var nameLookup={'veryActive':'Very active','moderatelyActive':'Moderately active','lightlyActive':'Lightly active','sedentaryActive':'Sedentary'};
         var strNames = "{";
         for(var j = 0; j < dNames.length; j++) {
-          if(j != dNames.length-1) strNames += '"' + j + '":"' + dNames[j] + '",';
-          else strNames += '"' + j + '":"' + dNames[j] + '"}';
+          if(j != dNames.length-1) strNames += '"' + j + '":"' + nameLookup[dNames[j]] + '",';
+          else strNames += '"' + j + '":"' + nameLookup[dNames[j]] + '"}';
         }
         amplify.publish('activity_piechart', 
           { 
