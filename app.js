@@ -1868,6 +1868,9 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	return {
 		init: _init,
+		register: function(path, cb) {
+      runtimePopup(path, cb);
+		},
 		login: function() {
 			var username = $("#username").val();
 			var password = $("#password").val();
@@ -1915,7 +1918,7 @@ var wellnessAPI =(function(wellnessAPI) {
 						userData.credentials = credentials;
 						if(typeof(json.user_info.city) != undefined) userData.address = json.user_info.city;
 						$("#login-msg").text(" Hi " + json.user_info.username + ", login successful.");
-						$("#usertext").text(json.user_info.firstName + "'s wellness dashboard");
+						$("#usertext").text(json.user_info.firstName + "'s WellMU dashboard");
 						$("div.login").hide(1000);
 						$( "#password-dialog" ).popup( "close" );
 						_disableLoginDialog();

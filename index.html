@@ -2,23 +2,24 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<title>Wellness Dashboard</title>
+		<title>WellMU Dashboard</title>
 		<link rel="stylesheet" type="text/css" href="style.css">
 		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
 		<link rel="stylesheet" href="./lib/mobiscroll/css/mobiscroll.custom-2.4.5.min.css" />
-
+		<link rel="stylesheet" href="./lib/bootstrap/css/bootstrap.css" />
+		
 		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 		<script src="http://masonry.desandro.com/jquery.masonry.min.js"></script>
 
+		<script src="./lib/bootstrap/js/bootstrap.js"></script>
+
 		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" ></script>
-		<script src="http://d3js.org/d3.v2.js"></script>
     <script src="./lib/highcharts/js/highcharts.js"></script>  
-		<script src="http://code.highcharts.com/modules/exporting.js"></script>
+		<!-- <script src="http://code.highcharts.com/modules/exporting.js"></script> -->
 		<script src="http://omnipotent.net/jquery.sparkline/2.1.1/jquery.sparkline.js"></script>
     <script src="http://code.highcharts.com/highcharts-more.js"></script>
 
-		<script src="./lib/bullet.js"></script>
 		<script src="./lib/amplify-1.1.0/amplify.js" ></script>
 		<script type="text/javascript" src="./lib/date.js"></script>
 		<script type="text/javascript" src="./app.js"></script>
@@ -61,9 +62,48 @@
 					<input type="button" data-mini="true" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
 				</div>
 
+<!--
+        <div id="tab-container">
+          <ul class="nav nav-tabs" data-tabs="tabs">
+              
+              <li class="active"><a data-toggle="tab" href="#red">Red</a></li>
+              <li><a data-toggle="tab" href="#orange">Orange</a></li>
+              <li><a data-toggle="tab" href="#yellow">Yellow</a></li>
+              <li><a data-toggle="tab" href="#green">Green</a></li>
+              <li><a data-toggle="tab" href="#blue">Blue</a></li>
+
+          </ul>
+          <div class="tab-content">
+             
+              <div class="tab-pane active" id="red">
+                  <h1>Red</h1>
+                  <p>red red red red red red</p>
+              </div>
+              <div class="tab-pane" id="orange">
+                  <h1>Orange</h1>
+                  <p>orange orange orange orange orange</p>
+              </div>
+              <div class="tab-pane" id="yellow">
+                  <h1>Yellow</h1>
+                  <p>yellow yellow yellow yellow yellow</p>
+              </div>
+              <div class="tab-pane" id="green">
+                  <h1>Green</h1>
+                  <p>green green green green green</p>
+              </div>
+              <div class="tab-pane" id="blue">
+                  <h1>Blue</h1>
+                  <p>blue blue blue blue blue</p>
+              </div>
+
+          </div>
+        </div>
+-->		
+
         <div id="masonry-container">
         </div>
-				
+
+		
 				<p style="display:none">
 						<span id="datetext"></span>
 						<span id="servicestext"></span>
@@ -83,6 +123,7 @@
  		    		   	<button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
 							</fieldset>
 						</form>
+						<p style="text-align: right;"><a href="#" data-rel="dialog" onClick="$( '#password-dialog' ).popup( 'close' ); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $( \'#password-dialog\' ).popup( \'open\' ); } )', 500);">Register</a></p>
 					</div>
 				</div>
       </div>
