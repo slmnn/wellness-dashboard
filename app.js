@@ -27,7 +27,6 @@ var gaugeUI = (function(gaugeUI) {
     if(typeof(gauge) == 'undefined') {
       var HTML = $('<div id="gaugewrapper"><span class="gaugetext">' + options.name + '</span></br><div id="gauge_' + options.id + '" class="gauge"></div></div>');
       $('#gauge-container').append(HTML);
-      $('#masonry-container').masonry( 'reload' );
       $("#gauge_" + options.id).highcharts({
         chart: {
             type: 'gauge',
@@ -96,8 +95,9 @@ var gaugeUI = (function(gaugeUI) {
     });
   }
   var _init = function() {
-    var HTML = $('<div id="gauge-container" class="masonry-box"></div>');
-    $('#masonry-container').append(HTML).masonry('appended', HTML);
+    var targetDivID = tabUI.newTab('Measures');
+    var HTML = $('<div id="gauge-container"></div>');
+    $('#' + targetDivID).append(HTML);
 		amplify.subscribe('new_gauge', function(d) {
       console.log('new_gauge', d);
 			_createGauge(d.targetDIVid, d.options, d.data);
@@ -108,108 +108,6 @@ var gaugeUI = (function(gaugeUI) {
   };
   return {
     init: _init
-  }
-}());
-
-var bulletChartUI = (function(bulletChartUI) {
-	var chart, parentDIVID, margin, width, height;
-	
-	var _init = function() {
-		parentDIVID = "#masonry-container";
-		var parentwidth = $(parentDIVID).width() / 2;
-		var HTML = $('<div id="bullet-chart-wrapper" style="width: '+ parentwidth + 'px" class="masonry-box"></div>');
-    var wrapperwidth = $('#bullet-chart-wrapper').width();
-    $(parentDIVID).append(HTML).masonry('appended', HTML);
-		margin = {top: 5, right: parentwidth * 0.05, bottom: 20, left: 160},
-			width = parentwidth - margin.left - margin.right,
-			height = 50 - margin.top - margin.bottom;
-
-		chart = d3.bullet()
-				.width(width)
-				.height(height);
-		
-		amplify.subscribe('new_bullet_chart', function(data) {
-      console.log('new_bullet_chart', data);
-			_createBulletChart(data.id, data.chart);
-		});
-		
-		amplify.subscribe('update_bullet_chart', function(data) {
-      console.log('update_bullet_chart', data);
-			_updateBulletChart(data.id, data.chart);
-		});
-	}
-
-  var _createBulletChart = function(id, data) {
-    var HTML = $('<div class="bullet-chart"  style="width:' + $(parentDIVID).width() / 2 + 'px;" id="'+ id +'"></div>');
-    $('#bullet-chart-wrapper').append(HTML); //.masonry('appended', HTML);
-    
-    var svg = d3.select('#'+id).selectAll("svg")
-        .data([data])
-      .enter().insert("svg")
-        .attr("class", "bullet")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-      .insert("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-        .call(chart);
-
-    var title = svg.append("g")
-        .style("text-anchor", "end")
-        .attr("transform", "translate(-6," + height / 2 + ")");
-
-    title.append("text")
-        .attr("class", "title")
-        .text(function(d) { return d.title; });
-
-    title.append("text")
-        .attr("class", "subtitle")
-        .attr("dy", "1em")
-        .text(function(d) { return d.subtitle; });
-        
-    title.append("text")
-        .attr("class", "bulletvalue")
-        .attr("dy", "1.8em")
-        .attr("id", id + "-value")
-        .text(function(d) { 
-          return '' + data.valuetxt; 
-        });
-        
-    chart.duration((1 + Math.random()) * 1000); 
-    $('#masonry-container').masonry( 'reload' );
-  };
-  
-  var _updateBulletChart = function(id, data) {
-    d3.select('#'+id).selectAll("svg") 
-        .data([data]) 
-        .call(chart); 
-
-    d3.selectAll(".title") 
-          .data(data) 
-          .attr("class", "title") 
-      .text(data.title) 
-          .text(function(data) { return data.title; }); 
-
-    d3.selectAll(".subtitle") 
-          .data(data) 
-      .attr("class", "subtitle") 
-      .attr("dy", "1em") 
-      .text(function(data) { return data.subtitle; });  
-      
-    d3.selectAll("#" + id + "-value")
-      .attr("class", "bulletvalue")
-      .attr("id", id + "-value")
-      .attr("dy", "1.8em") 
-      .text('' + data.valuetxt);  
-  };
-  
-  var _remove = function(id) {
-    $('#'+id).remove();
-  };
-  
-  return {
-    createBulletChart: _createBulletChart,
-    updateBulletChart: _updateBulletChart,
-		init: _init
   }
 }());
 
@@ -764,32 +662,36 @@ var ganttUI = (function(ganttUI) {
 
 var bulletSparkUI = (function(weatherUI) {
 	var _init = function() {
-    var HTML = $('<div class="masonry-box activity_variables"><b>Activity variables</b></br><table id="activity_variables" style="text-align: left; width:90%;"></table><div id="activity_piechart"></div></div>');
-    $("#masonry-container").append(HTML).masonry('appended', HTML);
+    if($(".activity_variables").length == 0) {
+      var targetDivID = tabUI.newTab('Activities');
+      var HTML = $('<div class="activity_variables">'+
+        '<div id="activity_variables"><b>Activity variables</b><br/><table id="activity_variables_table"></table></div>'+
+        '<div id="activity_piechart"></div></div>');
+      $('#' + targetDivID).append(HTML);
+    }
 		amplify.subscribe('bullet_chart', function(data) {
       console.log('update_bullet_chart spark', data.id, data.chart);
       $('#activity_table_row_' + data.id).remove();
 			var HTML = $(
         '<tr id="activity_table_row_' + data.id + '"><td class="activity_name">' + data.chart.title + '</td>'+
         '<td class="activity_value">' + data.chart.valuetxt + ' ' + data.chart.subtitle + '</td>'+
-        '<td><span id="activity_sparkline_' + data.id + '"></span></td></tr>'
+        '<td><span id="activity_sparkline_' + data.id + '">&nbsp;</span></td></tr>'
       );
-			$('#activity_variables').append(HTML);
+			$('#activity_variables_table').append(HTML);
 			// Goal, value, target1, target2, target3
       $('#activity_sparkline_' + data.id).sparkline([data.chart.markers[0], data.chart.measures[0], data.chart.ranges[2], data.chart.ranges[1], data.chart.ranges[0]], {type: 'bullet', width:'100px'});
-      $('#masonry-container').masonry( 'reload' );
 		});
 		amplify.subscribe('activity_piechart', function(data) {
       $('#activity_piechart_' + data.id).remove();
 			var HTML = $(
-        '<div id="activity_piechart_' + data.id + '"><b>' + data.title + '</b><br />'+
-        '<table id="activity_piechart_table_' + data.id + '" style="text-align: left; width:90%;"></table>' +
+        '<div id="activity_piechart_' + data.id + '" class="activity_piechart"><b>' + data.title + '</b><br />'+
+        '<table id="activity_piechart_table_' + data.id + '" class="activity_piechart_table"></table>' +
         '</div>'
       );
 			$('#activity_piechart').append(HTML);
 			HTML = "";
 			for(var i = 0; i < data.chart.length; i++) {
-        if(i == 0) HTML += '<tr><td rowspan="' + data.chart.length + '"><span id="activity_sparkline_pie_' + data.id + '"></span></td><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
+        if(i == 0) HTML += '<tr><td rowspan="' + data.chart.length + '"><span id="activity_sparkline_pie_' + data.id + '">&nbsp;</span></td><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
         else HTML += '<tr><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
 			}
 			$('#activity_piechart_table_' + data.id).append(HTML);
@@ -797,7 +699,6 @@ var bulletSparkUI = (function(weatherUI) {
         'tooltipValueLookups': {
             'names': data.names
         }});
-      $('#masonry-container').masonry( 'reload' );
 		});
 	};
 	return {
@@ -825,8 +726,9 @@ var analysisUI = (function(analysisUI) {
       );
     });
     if($("#analysis-container").length == 0) {
-      var HTML = $('<div class="masonry-box analysis-container" id="analysis-container"><b>Wellness Analysis</b></div>');
-      $("#masonry-container").append(HTML).masonry('appended', HTML);
+      var HTML = $('<div class="analysis-container" id="analysis-container"><b>Wellness Analysis</b></div>');
+      var targetDivID = tabUI.newTab('Analysis');
+      $('#' + targetDivID).append(HTML);
     }
   }
   var _clear = function() {
@@ -847,14 +749,15 @@ var weatherUI = (function(weatherUI) {
 			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 			var weekday = weekdays[Date.parse(data.history.date.pretty).getDay()];
 			if($("#weather_variables-container").length == 0) {
-        var HTML = $('<div class="masonry-box weather_variables" id="weather_variables-container"></div>');
-        $("#masonry-container").append(HTML).masonry('appended', HTML);
+        var targetDivID = tabUI.newTab('Weather');
+        var HTML = $('<div class="weather_variables-container" id="weather_variables-container"></div>');
+        $('#' + targetDivID).append(HTML);
 			}
-			var HTML = $('<div id="weather_variables_'+ weekday +'"><b>Weather conditions (' + weekday + ')</b></br>' +
-        '<table><tr><td class="weatherdata_name">Temperature</td><td class="weatherdata_value">' + summary.meantempm + ' C</td><td><span id="temperature_sparkline_' + weekday + '"></span></td></tr>' +
-        '<tr><td class="weatherdata_name">Dew P.T.</td><td class="weatherdata_value">' + summary.meandewptm + ' C</td><td><span id="dewptm_sparkline_' + weekday + '"></span></td></tr>' + 
-        '<tr><td class="weatherdata_name">Pressure</td><td class="weatherdata_value">' + summary.meanpressurem + ' hPa</td><td><span id="pressure_sparkline_' + weekday + '"></span></td></tr>' + 
-        '<tr><td class="weatherdata_name">Humidity</td><td class="weatherdata_value">' + summary.humidity + ' %</td><td><span id="humidity_sparkline_' + weekday + '"></span></td></tr></table>' +
+			var HTML = $('<div id="weather_variables_'+ weekday +'" class="weather_variables"><b>Weather conditions (' + weekday + ')</b></br>' +
+        '<table><tr><td class="weatherdata_name">Temperature</td><td class="weatherdata_value">' + summary.meantempm + ' C</td><td><span id="temperature_sparkline_' + weekday + '">&nbsp;</span></td></tr>' +
+        '<tr><td class="weatherdata_name">Dew P.T.</td><td class="weatherdata_value">' + summary.meandewptm + ' C</td><td><span id="dewptm_sparkline_' + weekday + '">&nbsp;</span></td></tr>' + 
+        '<tr><td class="weatherdata_name">Pressure</td><td class="weatherdata_value">' + summary.meanpressurem + ' hPa</td><td><span id="pressure_sparkline_' + weekday + '">&nbsp;</span></td></tr>' + 
+        '<tr><td class="weatherdata_name">Humidity</td><td class="weatherdata_value">' + summary.humidity + ' %</td><td><span id="humidity_sparkline_' + weekday + '">&nbsp;</span></td></tr></table>' +
         '</div>');
 			$("#weather_variables-container").append(HTML);
       var o = data.history.observations;
@@ -872,7 +775,7 @@ var weatherUI = (function(weatherUI) {
       $('#pressure_sparkline_' + weekday).sparkline(pressure_sparkline, {width:'100px'});
       $('#humidity_sparkline_' + weekday).sparkline(humidity_sparkline, {width:'100px'});
       $('#dewptm_sparkline_' + weekday).sparkline(dewptm_sparkline, {width:'100px'});
-      $('#masonry-container').masonry( 'reload' );
+      $.sparkline_display_visible();
 		});
 	};
 	return {
@@ -898,8 +801,9 @@ var calendarUI = (function(calendarUI) {
         var summary = events.summary.substring(0,SUMMARY_MAX_LENGTH) + '...';
       }
       if($(".calendar_events-container").length == 0) {
-        var HTML = $('<div class="masonry-box calendar_events-container" id="calendar_events-container"></div>');
-        $("#masonry-container").append(HTML).masonry('appended', HTML);
+        var targetDivID = tabUI.newTab('Calendar');
+        var HTML = $('<div class="calendar_events-container" id="calendar_events-container"></div>');
+        $('#' + targetDivID).append(HTML);
       }
 			var HTML = $('<div class="calendar_events" id="calendar_events_'+ etag +'">' + 
         '<b>Calendar: ' + summary + ' (' + weekday + ')</b></br>' +        
@@ -980,13 +884,51 @@ var calendarUI = (function(calendarUI) {
         );
         $('#calendar_events_' + etag + '_table').append(HTML);
       }
-      $('#masonry-container').masonry( 'reload' );
 		});
 	};
 	return {
 		init: _init,
 		clear: _clear
 	}
+}());
+
+var tabUI = (function(tabUI) {
+  var _tabs = [];
+  return {
+    newTab: function(title) {
+      // Event binding
+      $('a[data-toggle="tab"]').on('shown', function (e) {
+        e.target // activated tab
+        e.relatedTarget // previous tab
+        $.sparkline_display_visible();
+      })
+    
+      // See if tab already exists
+      if($('#tab-content-' + title).length > 0)
+        return 'tab-content-' + title;
+      
+      // First we create the tab
+      var liActive = '';
+      var divActive = '';
+      if(_tabs.length == 0) { 
+        liActive = ' class="active"'; 
+        divActive = ' active';
+      }
+      var HTML = '<li' + liActive + '><a data-toggle="tab" href="#tab-content-' + title + '">' + title + '</a></li>';
+      $('.nav-tabs').append(HTML);
+      
+      // Then we create the contents div
+      var HTML = '<div class="tab-pane ' + divActive + '" id="tab-content-' + title + '"></div>';
+      $('.tab-content').append(HTML);
+      
+      // Returning content div id
+      _tabs.push('tab-content-' + title);
+      return 'tab-content-' + title;
+    },
+    clearTab: function(title) {
+      $('#tab-content-' + title).empty();
+    }
+  };
 }());
 
 var weatherAPI = (function(weatherAPI) {
@@ -1040,20 +982,21 @@ var wellnessAPI =(function(wellnessAPI) {
     var end;
 		for(var i = 0; i < json.data.length; i++) {
       if(typeof(json.data[i].common) != 'undefined'){
-         if($('#sleep_variables-container').length == 0) {
-          var HTML = $('<div class="masonry-box sleep_variables" id="sleep_variables-container"></div>');
-          $('#masonry-container').append(HTML).masonry('appended', HTML);
+        if($('#sleep_variables-container').length == 0) {
+          var targetDivID = tabUI.newTab('Sleep');
+          var HTML = $('<div class="sleep_variables-container" id="sleep_variables-container"></div>');
+          $('#' + targetDivID).append(HTML);
         }
         var common = json.data[i].common;
         if(common.source == null) continue;
         var daynumber = Date.parse(common.date).getDay();       
-        $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
+        // $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
         $('#sleep_variables-container').append(
-          '<div style="display: inline-block; float: left;" class="sleep_variables-' + i + '">' +
-          '<table style="display: inline-block;" class="sleepdata_table" id="sleepdata_table_' + i + '">' +
+          '<div class="sleep_variables" id="sleep_variables-' + i + '">' +
+          '<table class="sleepdata_table" id="sleepdata_table_' + i + '">' +
           '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
           '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><td></td></tr>' +
-          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString((common.minutesAsleep + common.minutesAwake) * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">Loading..</span></td></tr>' +
+          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString((common.minutesAsleep + common.minutesAwake) * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">&nbsp;</span></td></tr>' +
           '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
           '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
           '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
@@ -1061,9 +1004,8 @@ var wellnessAPI =(function(wellnessAPI) {
           '</table></div>'
         );
         $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(common.minutesAsleep / 60 * 100) / 100],[Math.round(common.minutesAwake / 60 * 100) / 100]], {'type': 'pie', 'width':'10px'});
-        
+        $.sparkline_display_visible();
       }
-      
       
       if(json.data[i].fitbit != null) {
         var fitbit = json.data[i].fitbit;
@@ -1168,11 +1110,11 @@ var wellnessAPI =(function(wellnessAPI) {
           // Implement parseStages function that gives an array of intervals
         } 						
         $('#sleepdata_table_' + i).append(
-          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">Loading..</span></td>--></tr>' +
-//          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(beddit.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">Loading..</span></td></tr>' +
+          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
+//          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(beddit.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">&nbsp;</span></td></tr>' +
           '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(beddit.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
-          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">Loading..</span></td>--></tr>'
+          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">&nbsp;</span></td>--></tr>'
         );
       
         $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(beddit.time_sleeping/3600 * 100) / 100],[Math.round(beddit.time_deep_sleep/3600 * 100) / 100],[ Math.round(beddit.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
@@ -1211,8 +1153,6 @@ var wellnessAPI =(function(wellnessAPI) {
     amplify.publish('new_timeline_dataset',
       {'name':'Luminosity','id':'luminosity','min':0,'visible':false,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
     }
-    
-    $('#masonry-container').masonry( 'reload' ); 
 		
 		var stages = [];
 		if(fitbit_reallywake.length > 0) stages.push({name: 'Moving a lot', intervals: fitbit_reallywake});		
@@ -1232,12 +1172,11 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 
 	var _withingsCB = function(data) {
-		var json = $.parseJSON(data);
-		
+		var json = $.parseJSON(data);		
 		if(json.data[0].latest.weight != undefined) {
       var value = Math.round(json.data[0].latest.weight.value * 10) / 10;
       var gaugesettings = 
-        {'targetDIVid':'#masonry-container',
+        {'targetDIVid':'#gauge-container',
          'data':{'value':value,'valueSuffix':' kg'}, 
          'options':{
             'id':'weight',
@@ -1309,7 +1248,7 @@ var wellnessAPI =(function(wellnessAPI) {
       && json.data[0].latest.sysPressure != undefined) {
       value = Math.round(json.data[0].latest.sysPressure.value * 10) / 10;
       var gaugesettings = 
-        {'targetDIVid':'#masonry-container',
+        {'targetDIVid':'#gauge-container',
          'data':{'value':value,'valueSuffix':' mmHg'}, 
          'options':{'id':'sysp','name':'DBP/SBP','min':0,'max':180,
           'yAxis': [{
@@ -1447,7 +1386,7 @@ var wellnessAPI =(function(wellnessAPI) {
 		if(json.data[0].latest.pulse != undefined) {    
       value = Math.round(json.data[0].latest.pulse.value * 10) / 10;
       var gaugesettings = 
-        {'targetDIVid':'#masonry-container',
+        {'targetDIVid':'#gauge-container',
          'data':{'value':value,'valueSuffix':' bpm'}, 
          'options':{'id':'pulse','name':'Pulse','min':0,'max':160, 
                  'yAxis': [{
@@ -1752,14 +1691,6 @@ var wellnessAPI =(function(wellnessAPI) {
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
-		$('#masonry-container').masonry({
-      itemSelector: '.masonry-box',
-      columnWidth: $('#masonry-container').width() / 36,
-      isAnimated: true,
-      animationOptions: {
-        duration: 400
-      }
-    });
 		weatherUI.init();
 		//weatherAPI.getWeatherHistory(userData.address, _currentday);
 		//if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {

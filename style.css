@@ -7,8 +7,9 @@ html {
 }
 table
 { 
-margin-left: auto;
-margin-right: auto;
+  float: left;
+ margin-left: auto;
+ margin-right: auto;
 }
 div.login {
 	font:15px arial,sans-serif;	
@@ -41,62 +42,110 @@ span.gaugetext {
 }
 div#gauge-container {
   float: left;
-  width: 130px;
   margin: 4px;
+    padding: 5px;
 }
 div#gaugewrapper {
-/*	display:inline-block; */
-  background: #fff; font: 12px sans-serif;
+  display: inline-block;
+  background: #fff; 
+  font: 12px sans-serif;
   text-align: center;
   float: left;
-  width: 120px;
   margin: 4px;
+  
 }
 div.gauge {
-	width: 120px%;
+	width: 120px;
 	height: 120px;
 }
 div#weather {
   padding: 5px;
-  background: #fff; font: 10px sans-serif;
+    text-align: center;
+  font: 10px sans-serif;
   overflow:hidden;
 }
-div.sleep_variables {
-  text-align: center;
-  width: 260px;
-  margin: 4px;
-  padding: 10px;
+div.sleep_variables-container {
   float: left;
-  background: #fff; font: 12px sans-serif;
+  font: 12px sans-serif;
   overflow:hidden;
+  margin-top: 10px;
+}
+div.sleep_variables {
+  margin: 4px;
+    text-align: center;
+  padding: 5px;
+  float: left;
+  background: #fff;
+  display: inline-block;
 }
 div#analysis-container {
   text-align: center;
-  width: 260px;
+  width: 300px;
+  margin-top: 10px;
   margin: 4px;
-  padding: 10px;
   float: left;
-  background: #fff; font: 12px sans-serif;
+  background: #fff; 
+  font: 12px sans-serif;
+  overflow:hidden;
+}
+div.weather_variables-container {
+  margin-top: 10px;
+  float: left;
+  font: 12px sans-serif;
   overflow:hidden;
 }
 div.weather_variables {
-  text-align: center;
-  margin-top: 10px;
-  width: 260px;
-  padding: 10px;
   margin: 4px;
+    padding: 5px;
+      text-align: center;
   float: left;
-  background: #fff; font: 12px sans-serif;
+  background: #fff; 
   overflow:hidden;
+  display: inline-block;
 }
 div.activity_variables {
-  text-align: center;
-  width: 260px;
-  padding: 10px;
   margin: 4px;
-  float: left;
-  background: #fff; font: 12px sans-serif;
+  font: 12px sans-serif;
+  text-align: center;
   overflow:hidden;
+  display: inline-block;
+}
+div#activity_variables {
+  width: 300px;
+  background: #fff;
+    padding: 5px;
+  text-align: center;
+  margin: 4px; 
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+}
+div#activity_variables_table {
+  width: 300px;
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+div#activity_piechart {
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+}
+div.activity_piechart {
+  width: 300px;
+  background: #fff;
+    padding: 5px;
+  text-align: center;
+  margin: 4px;
+  display: inline-block;
+}
+div.activity_piechart_table {
+  width: 300px;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-block;
 }
 td.activity_name {
   text-align: left;
@@ -107,15 +156,21 @@ td.activity_value {
 }
 div.calendar_events-container {
   text-align: center;
-  width: 260px;
-  padding: 10px;
   margin: 4px;
   float: left;
-  background: #fff; font: 12px sans-serif;
+  font: 12px sans-serif;
   overflow:hidden;
 }
 div.calendar_events {
   margin-top: 10px;
+  text-align: center; 
+  display: inline-block;
+  width: 300px;
+  margin: 4px;
+    padding: 5px;
+  background: #fff;
+  margin-left: auto;
+  margin-right: auto;
 }
 td.cal_start{
   font-weight: bold;
@@ -148,26 +203,3 @@ td.weatherdata_value {
   font-weight: bold;
   text-align: right;
 }
-div#bullet-chart-wrapper{
-	overflow:hidden;
-	float: left;
-	margin: 4px;
-	width: 480px;
-}
-div.bullet-chart{
-	overflow:hidden;
-	float: left;
-	margin: 4px;
-	width: 480px;
-}
-.bullet { background: #fff; font: 10px sans-serif; }
-.bullet .marker { stroke: #000; stroke-width: 2px; }
-.bullet .tick line { stroke: #666; stroke-width: .5px; }
-.bullet .range.s0 { fill: #eee; }
-.bullet .range.s1 { fill: #ddd; }
-.bullet .range.s2 { fill: #ccc; }
-.bullet .measure.s1 { fill: lightsteelblue; }
-.bullet .measure.s0 { fill: steelblue; }
-.bullet .title { font-size: 14px; font-weight: bold; }
-.bullet .bulletvalue { font-size: 14px; font-weight: bold; fill: #333;}
-.bullet .subtitle { fill: #999; }
