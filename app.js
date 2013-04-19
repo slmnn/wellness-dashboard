@@ -25,7 +25,7 @@ var gaugeUI = (function(gaugeUI) {
   var _createGauge = function(targetDIVid, options, sourcedata) {
     var gauge = $('#gauge_' + options.id).highcharts();
     if(typeof(gauge) == 'undefined') {
-      var HTML = $('<div id="gaugewrapper"><span class="gaugetext">' + options.name + '</span></br><div id="gauge_' + options.id + '" class="gauge"></div></div>');
+      var HTML = $('<div class="gauge-wrapper"><span class="gaugetext">' + options.name + '</span></br><div id="gauge_' + options.id + '" class="gauge"></div></div>');
       $('#gauge-container').append(HTML);
       $("#gauge_" + options.id).highcharts({
         chart: {
@@ -665,8 +665,8 @@ var bulletSparkUI = (function(weatherUI) {
     if($(".activity_variables").length == 0) {
       var targetDivID = tabUI.newTab('Activities');
       var HTML = $('<div class="activity_variables">'+
-        '<div id="activity_variables"><b>Activity variables</b><br/><table id="activity_variables_table"></table></div>'+
-        '<div id="activity_piechart"></div></div>');
+        '<div id="activity_variables" class="table-wrapper"><b>Activity variables</b><br/><table id="activity_variables_table"></table></div>'+
+        '</div>');
       $('#' + targetDivID).append(HTML);
     }
 		amplify.subscribe('bullet_chart', function(data) {
@@ -684,15 +684,15 @@ var bulletSparkUI = (function(weatherUI) {
 		amplify.subscribe('activity_piechart', function(data) {
       $('#activity_piechart_' + data.id).remove();
 			var HTML = $(
-        '<div id="activity_piechart_' + data.id + '" class="activity_piechart"><b>' + data.title + '</b><br />'+
+        '<div id="activity_piechart_' + data.id + '" class="activity_piechart table-wrapper"><b>' + data.title + '</b><br />'+
         '<table id="activity_piechart_table_' + data.id + '" class="activity_piechart_table"></table>' +
         '</div>'
       );
-			$('#activity_piechart').append(HTML);
+			$('.activity_variables').append(HTML);
 			HTML = "";
 			for(var i = 0; i < data.chart.length; i++) {
-        if(i == 0) HTML += '<tr><td rowspan="' + data.chart.length + '"><span id="activity_sparkline_pie_' + data.id + '">&nbsp;</span></td><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
-        else HTML += '<tr><td>' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
+        if(i == 0) HTML += '<tr><td rowspan="' + data.chart.length + '"><span id="activity_sparkline_pie_' + data.id + '">&nbsp;</span></td><td style="text-align: left;">' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
+        else HTML += '<tr><td style="text-align: left;">' + data.names[i] + '</td><td style="text-align: right; font-weight:bold;">' + data.formatter(data.chart[i]) + '</td><td>' + data.unit + '</td></tr>';
 			}
 			$('#activity_piechart_table_' + data.id).append(HTML);
       $('#activity_sparkline_pie_' + data.id).sparkline(data.chart, {type: 'pie', width:'50px', height: '50px', tooltipFormat: '<span style="color: {{color}}">&#9679;</span> {{offset:names}} ({{percent.1}}%)',
@@ -711,14 +711,14 @@ var analysisUI = (function(analysisUI) {
     $("#analysis-container").remove();
     amplify.subscribe('analysis_available', function(d) {
       if($('#analysis_available_' + d.type).length == 0) {
-        $("#analysis-container").append('<div id="analysis_available_' + d.type + '"  style="margin-top: 10px;"><b>' + d.type + '</b><br /><table id="analysis_available_table_' + d.type + '" style="width: 90%"></table></div>');
+        $("#analysis-container").append('<div id="analysis_available_' + d.type + '"><b>' + d.type + '</b><br /><table id="analysis_available_table_' + d.type + '" style="width: 90%"></table></div>');
       }
       var HTML = '<tr><td style="align: left;">' + d.name + '</td><td style="align: right;"><b>' + d.value + '</b></td><td style="align: right;">' + d.date + '</td></tr>';
       $("#analysis_available_table_" + d.type).append(HTML);
     });
     amplify.subscribe('analysis_possible', function(d) {
       if($('#analysis_possible_' + d.type).length == 0) {
-        var HTML = '<div id="analysis_possible_' + d.id + '" style="margin-top: 10px;"></div>';
+        var HTML = '<div id="analysis_possible_' + d.id + '" style="margin-bottom: 10px; margin-top: 6px;"><b>Possible Analysis</b></br></div>';
         $("#analysis-container").append(HTML);
       }
       $("#analysis_possible_" + d.id).append(
@@ -726,14 +726,13 @@ var analysisUI = (function(analysisUI) {
       );
     });
     if($("#analysis-container").length == 0) {
-      var HTML = $('<div class="analysis-container" id="analysis-container"><b>Wellness Analysis</b></div>');
+      var HTML = $('<div class="analysis-container table-wrapper" id="analysis-container"><b>Wellness Analysis</b></div>');
       var targetDivID = tabUI.newTab('Analysis');
       $('#' + targetDivID).append(HTML);
     }
   }
   var _clear = function() {
     $("#analysis-container").empty();
-    $("#analysis-container").append('<b>Wellness Analysis</b>');
   }
   return {
     init: _init,
@@ -753,7 +752,7 @@ var weatherUI = (function(weatherUI) {
         var HTML = $('<div class="weather_variables-container" id="weather_variables-container"></div>');
         $('#' + targetDivID).append(HTML);
 			}
-			var HTML = $('<div id="weather_variables_'+ weekday +'" class="weather_variables"><b>Weather conditions (' + weekday + ')</b></br>' +
+			var HTML = $('<div id="weather_variables_'+ weekday +'" class="weather_variables table-wrapper"><b>Weather conditions (' + weekday + ')</b></br>' +
         '<table><tr><td class="weatherdata_name">Temperature</td><td class="weatherdata_value">' + summary.meantempm + ' C</td><td><span id="temperature_sparkline_' + weekday + '">&nbsp;</span></td></tr>' +
         '<tr><td class="weatherdata_name">Dew P.T.</td><td class="weatherdata_value">' + summary.meandewptm + ' C</td><td><span id="dewptm_sparkline_' + weekday + '">&nbsp;</span></td></tr>' + 
         '<tr><td class="weatherdata_name">Pressure</td><td class="weatherdata_value">' + summary.meanpressurem + ' hPa</td><td><span id="pressure_sparkline_' + weekday + '">&nbsp;</span></td></tr>' + 
@@ -775,7 +774,6 @@ var weatherUI = (function(weatherUI) {
       $('#pressure_sparkline_' + weekday).sparkline(pressure_sparkline, {width:'100px'});
       $('#humidity_sparkline_' + weekday).sparkline(humidity_sparkline, {width:'100px'});
       $('#dewptm_sparkline_' + weekday).sparkline(dewptm_sparkline, {width:'100px'});
-      $.sparkline_display_visible();
 		});
 	};
 	return {
@@ -805,7 +803,7 @@ var calendarUI = (function(calendarUI) {
         var HTML = $('<div class="calendar_events-container" id="calendar_events-container"></div>');
         $('#' + targetDivID).append(HTML);
       }
-			var HTML = $('<div class="calendar_events" id="calendar_events_'+ etag +'">' + 
+			var HTML = $('<div class="calendar_events table-wrapper" id="calendar_events_'+ etag +'">' + 
         '<b>Calendar: ' + summary + ' (' + weekday + ')</b></br>' +        
         '<table id="calendar_events_'+ etag +'_table">'+
         '</table>' +
@@ -992,7 +990,7 @@ var wellnessAPI =(function(wellnessAPI) {
         var daynumber = Date.parse(common.date).getDay();       
         // $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
         $('#sleep_variables-container').append(
-          '<div class="sleep_variables" id="sleep_variables-' + i + '">' +
+          '<div class="sleep_variables table-wrapper" id="sleep_variables-' + i + '">' +
           '<table class="sleepdata_table" id="sleepdata_table_' + i + '">' +
           '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
           '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><td></td></tr>' +
@@ -1616,8 +1614,14 @@ var wellnessAPI =(function(wellnessAPI) {
         var nameLookup={'veryActive':'Very active','moderatelyActive':'Moderately active','lightlyActive':'Lightly active','sedentaryActive':'Sedentary'};
         var strNames = "{";
         for(var j = 0; j < dNames.length; j++) {
-          if(j != dNames.length-1) strNames += '"' + j + '":"' + nameLookup[dNames[j]] + '",';
-          else strNames += '"' + j + '":"' + nameLookup[dNames[j]] + '"}';
+          var name = "";
+          if(nameLookup[dNames[j]] !== undefined) {
+            name = nameLookup[dNames[j]];
+          } else {
+            name = dNames[j].substring(0,14) + "...";
+          }
+          if(j != dNames.length-1) strNames += '"' + j + '":"' + name + '",';
+          else strNames += '"' + j + '":"' + name + '"}';
         }
         amplify.publish('activity_piechart', 
           { 
@@ -1688,6 +1692,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _init = function() {
 		_currentday = new Date(_today.addDays(-1));
 		$("#dateselect").css({"visibility":"visible"});
+		$("#tab-container").css({"visibility":"visible"});
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";

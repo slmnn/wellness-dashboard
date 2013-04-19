@@ -53,7 +53,7 @@
 		
 		<div data-role="page"> 
 			<div data-role="header">
-				<h1><span id="usertext">Wellness Dashboard</span></h1>
+				<h1><span id="usertext">WellMU Dashboard</span></h1>
 			</div>
 			<div data-role="content">
 				<div style="text-align: center; display:block; width:auto; visibility:hidden" id="dateselect">
@@ -62,7 +62,7 @@
 					<input type="button" data-mini="true" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
 				</div>
 
-        <div id="tab-container">
+        <div id="tab-container" style="visibility:hidden">
           <ul class="nav nav-tabs" data-tabs="tabs">
           </ul>
 
@@ -77,7 +77,7 @@
 
 				<div data-role="popup" id="password-dialog" data-dismissible="false">
 					<div data-role="content">
-						<p><span id="login-msg">Enter your credentials.</span></p>
+						<p><span id="login-msg">Enter your credentials</span></p>
 						<form action="javascript:void(0);">
 							<fieldset>
 								<div data-role="fieldcontain">
@@ -89,7 +89,7 @@
  		    		   	<button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
 							</fieldset>
 						</form>
-						<p style="text-align: right;">No accout? <a href="#" data-rel="dialog" onClick="$( '#password-dialog' ).popup( 'close' ); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $( \'#password-dialog\' ).popup( \'open\' ); } )', 500);">Register!</a></p>
+						<p class="register">No accout? <a href="#" data-rel="dialog" onClick="$( '#password-dialog' ).popup( 'close' ); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $( \'#password-dialog\' ).popup( \'open\' ); } )', 500);">Register!</a></p>
 					</div>
 				</div>
       </div>
