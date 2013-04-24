@@ -21,6 +21,7 @@ var userData = (function(userData) {
 	}
 }());
 
+
 var gaugeUI = (function(gaugeUI) {
   var _createGauge = function(targetDIVid, options, sourcedata) {
     var gauge = $('#gauge_' + options.id).highcharts();
@@ -286,6 +287,7 @@ highchartsUI = (function(highchartsUI) {
 				chart: {
 						type: 'spline',
 						height: 400,
+						width: $(window).width()-40,
 						zoomType: 'x'
 				},
 				title: {
@@ -484,6 +486,7 @@ var ganttUI = (function(ganttUI) {
     // create the chart
     _chart = new Highcharts.Chart({
         chart: {
+            width: $(window).width()-40,
             renderTo: _parentDIV,
             type: 'line'
         },
@@ -958,7 +961,7 @@ var weatherAPI = (function(weatherAPI) {
 	}
 }());
 
-var wellnessAPI =(function(wellnessAPI) {
+var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	var baseurl = 'https://wellness.cs.tut.fi/';
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 	var _sleepCB = function(data) {
@@ -1669,7 +1672,8 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _setDate = function(dateString) {
 		_currentday = Date.parse(dateString);
 		if(_currentday == 'Invalid Date' || _currentday == null)
-			_currentday = Date.today();
+			_currentday = new Date(_today.addDays(-1));
+    $('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
 		_refreshData();
 	};
@@ -1689,8 +1693,10 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 
 	var _today = Date.today();
-	var _init = function() {
-		_currentday = new Date(_today.addDays(-1));
+	var _init = function(date) {
+    console.log('Initializing single day view', date, gup('date'));
+    _currentday = Date.parse(gup('date'));
+    if(_currentday == null) _currentday = new Date(_today.addDays(-1));
 		$("#dateselect").css({"visibility":"visible"});
 		$("#tab-container").css({"visibility":"visible"});
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
@@ -1854,11 +1860,10 @@ var wellnessAPI =(function(wellnessAPI) {
 						userData.credentials = credentials;
 						if(typeof(json.user_info.city) != undefined) userData.address = json.user_info.city;
 						$("#login-msg").text(" Hi " + json.user_info.username + ", login successful.");
-						$("#usertext").text(json.user_info.firstName + "'s WellMU dashboard");
+						$(".headertext").text(json.user_info.firstName + "'s WellMU dashboard");
 						$("div.login").hide(1000);
-						$( "#password-dialog" ).popup( "close" );
 						_disableLoginDialog();
-
+						$.mobile.changePage("#single-day-page");
 						_init();
 					} else {
 						// Login unsuccessful, does not work as the server fails to respond
@@ -1873,6 +1878,399 @@ var wellnessAPI =(function(wellnessAPI) {
 		nextDay: _nextDay,
 		prevDay: _prevDay
 	}
+}());
+
+var wellnessAPI =(function(wellnessAPI) {
+	var baseurl = 'https://wellness.cs.tut.fi/';
+  var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+	var _getData = function(apicall, cb) {
+		var myurl = baseurl + apicall;
+		$.ajax(
+			{
+				url: myurl,
+	    	type: 'GET',
+				datatype: 'json',
+	    	headers: {
+	        "Authorization": userData.credentials
+   			}
+			}
+		).done(cb);
+	};
+
+	var _today = Date.today();
+	var _currentday;
+	var _chart;
+	
+	var _daypath = function(date) {
+    return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + (date.getDate()) + '/';
+	};
+	
+	var _createSeries = function(container) {
+    $(container).highcharts(
+    {
+      chart: {
+        type: 'column',
+        width: $(window).width()-40
+      },
+      title: {
+        text: 'Wellness timeline',
+      },
+      subtitle: {
+          text: 'Click a point to see more details'
+      },
+      plotOptions: {
+        series: {
+          cursor: 'pointer',
+          point: {
+            events: {
+              click: function() {
+                $.mobile.changePage(
+                  '#single-day-page?date=' + Highcharts.dateFormat('%Y-%m-%d', this.x), 
+                  {transition: 'pop'}
+                );
+                
+                //hs.htmlExpand(null, {
+                //  pageOrigin: {
+                //    x: this.pageX,
+                //    y: this.pageY
+                //  },
+                //  headingText: Highcharts.dateFormat('%A, %b %e, %Y', this.x),
+                //  maincontentText: '<a href="#single-day-page?date=' + Highcharts.dateFormat('%Y-%m-%d', this.x) + 
+                //    '" data-params="date=' + Highcharts.dateFormat('%Y-%m-%d', this.x) + 
+                //    '" onclick="javascript:parent.window.hs.close(); /*wellnessAPISingleDay.setDate(' + 
+                //    Highcharts.dateFormat('%Y-%m-%d', this.x) +') */">See details in single day view</a>',
+                //  width: 200
+                //});
+                
+              }
+            }
+          },
+          marker: {
+            lineWidth: 1
+          }
+        }
+      },
+      xAxis: {
+        type: 'datetime'
+      },
+      yAxis: [
+        {
+          min: 0,
+          id: 'asleep',
+          showEmpty: false,
+          title: {
+            text: 'Min. asleep'
+          }
+        }
+      ],
+      tooltip: {
+        shared: true,
+        useHTML: true,
+        formatter: function() {
+          var day = new Date(this.x);
+          var dayString = day.toString('yyyy-MM-dd');
+        	var s = '<b><a href="#single-day-page?date=' + dayString + 
+                    '" data-params="date=' + dayString + '" onclick="/*wellnessAPISingleDay.setDate(' + 
+                    Highcharts.dateFormat('%Y-%m-%d', this.x) +')/*">' + 
+            Highcharts.dateFormat('%A, %b %e, %Y', this.x) + '</a></b><br />';
+        	s += '<table>'
+          $.each(this.points, function(i, point) {
+            s += '<tr><td>' + this.series.name + '</td><td><b>' + point.y + '</b></td></tr>'; 
+          });
+          s += '</table>';
+          return s;
+        }
+      },
+      series: [
+        { 
+          type: 'line',
+          yAxis: 'asleep',
+          name: 'Min. asleep',
+          data: []
+          
+        }
+      ]
+    });
+    
+    var chart = $(container).highcharts();
+    if(typeof(chart) == 'object') {
+      if(chart.series.length > 0) {
+        while(chart.series.length > 0) {
+          chart.series[0].remove(true); //forces the chart to redraw
+        }
+        chart.redraw();
+      }
+      if(chart.yAxis.length > 0) {
+        while(chart.yAxis.length > 0) {
+          chart.yAxis[0].remove(true); //forces the chart to redraw
+        }
+        chart.redraw();
+      }
+    }
+    return chart;
+	};
+	
+	var _addAxisAndSeries = function(seriesId, seriesName, seriesData, seriesVisible) {
+    seriesVisible = typeof seriesVisible !== 'undefined' ? seriesVisible : false;
+    _chart.addAxis({
+      id: seriesId,
+      min: 0,
+      showEmpty: false,
+      title: {
+        text: seriesName
+      }
+    }, true, true);
+    _chart.addSeries({
+      visible: seriesVisible,
+      type: 'line',
+      yAxis: seriesId,
+      name: seriesName,
+      data: seriesData
+    }, false);
+    $('#select-choice-1').append('<option value="' + seriesName + '">' + seriesName + '</option>');
+    $('#select-choice-2').append('<option value="' + seriesName + '">' + seriesName + '</option>');
+	}
+	
+	// Leave two series with exact names to be shown
+	var _hideOtherSeries = function(name1, name2) {
+    var series1, series2;
+    for(var i = 0; i < _chart.series.length; i++) {
+      _chart.series[i].hide();
+      if(_chart.series[i].name == name1)
+        series1 = _chart.series[i];
+      if(_chart.series[i].name == name2)
+        series2 = _chart.series[i];
+    }
+    if(typeof(series1) != 'undefined' && typeof(series2) != 'undefined') {
+      series1.show();
+      series2.show();
+      return true;
+    }
+    return false;
+	}
+	
+	var _period = 7;
+	
+	// Initialize the application based on available services
+	var _init = function() {
+		_currentday = new Date(_today.clone().add({days: (_period * -1)}));
+		
+		// Create something to draw on
+    if($('#series-container').length == 0) {
+      var targetDivID = 'highcharts';
+      var HTML = $('<div id="series-container"></div>');
+      $('#' + targetDivID).append(HTML);
+    }		
+		_chart = _createSeries('#series-container');
+		
+    _populateChart();
+	};
+	
+	var _setPeriod = function(newPeriod) {
+    _period = newPeriod;
+    _destroyChart();
+    _init();
+	}
+	
+	var _destroyChart = function() {
+    _chart.destroy();
+    $('#series-container').remove();
+    $('#select-choice-1').empty();
+    $('#select-choice-2').empty();
+    $('#select-choice-1').append('<option value="" selected>- Select -</option>');
+    $('#select-choice-2').append('<option value="" selected>- Select -</option>');
+    $('#select-choice-1').selectmenu("refresh", true);
+    $('#select-choice-2').selectmenu("refresh", true);
+	};
+	
+	var _populateChart = function() {		
+    // Sleep
+		if(userData.fitbit || userData.beddit) {
+      _getData('api/unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+        var json = $.parseJSON(data);
+        
+        var series = { 
+          minutesAsleep: [], 
+          minutesAwake: [],
+          minutesToFallAsleep: [], 
+          efficiency: [] 
+        };
+        for(var i = 0; i < json.data.length; i++) {
+          var current = json.data[i].common;
+          if(typeof(current) == 'undefined') continue;
+          if(typeof(current) == 'undefined') continue;
+          var day = Date.parse(current.date);
+          if(day != null) {
+            var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+            series.minutesAsleep.push([utcDay, current.minutesAsleep]);
+            series.minutesAwake.push([utcDay, current.minutesAwake]);
+            series.efficiency.push([utcDay, Math.round(current.efficiency * 100) / 100]);
+            series.minutesToFallAsleep.push([utcDay, current.minutesToFallAsleep]);
+          }
+        }
+        
+        _addAxisAndSeries('minutesAwake', 'Min. awake', series.minutesAwake);
+        _addAxisAndSeries('minutesAsleep', 'Min. asleep', series.minutesAsleep);
+        _addAxisAndSeries('efficiency', 'Sleep efficiency', series.efficiency, true);
+        _addAxisAndSeries('minutesToFallAsleep', 'Min. to fall asleep', series.minutesToFallAsleep);
+       
+        _chart.redraw();
+      });
+    }
+    
+    // Activities
+    if(userData.fitbit) {
+      _getData('api/unify/activities/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+        var json = $.parseJSON(data);
+        var series = { 
+          steps: [], 
+          minutesSedentary: [],
+          activityCalories: [],
+          activeScore: []
+        };
+        for(var i = 0; i < json.data.length; i++) {
+          var current = json.data[i];
+          if(typeof(current.summary) == 'undefined') continue;
+          var day = Date.parse(current.date);
+          if(day != null) {
+            var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+            series.steps.push([utcDay, current.summary.steps]);
+            series.minutesSedentary.push([utcDay, current.summary.sedentaryMinutes]);
+            series.activityCalories.push([utcDay, current.summary.activityCalories]);
+            series.activeScore.push([utcDay, current.summary.activeScore]);
+          }
+        }
+        
+        _addAxisAndSeries('steps', 'Steps', series.steps, true);
+        _addAxisAndSeries('minutesSedentary', 'Min. sedentary', series.minutesSedentary);
+        _addAxisAndSeries('activityCalories', 'Activity calories', series.activityCalories);
+        _addAxisAndSeries('activeScore', 'Active score', series.activeScore);
+                
+        _chart.redraw();
+      });
+    }
+    
+    // Weight, height, blood pressure
+    if(userData.withings) {
+      _getData('api/unify/measures/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+        var json = $.parseJSON(data);
+        var series = { 
+          weight: [], 
+          pulse: [],
+          diasPressure: [],
+          sysPressure: []
+        };
+        for(var i = 0; i < json.data.length; i++) {
+          var current = json.data[i];
+          if(typeof(current.latest) == 'undefined') continue;
+          if(typeof(current.latest.weight) == 'undefined') continue;
+          if(typeof(current.latest.pulse) == 'undefined') continue;
+          if(typeof(current.latest.diasPressure) == 'undefined') continue;
+          if(typeof(current.latest.sysPressure) == 'undefined') continue;
+          var day = Date.parse(current.date);
+          if(day != null) {
+            var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+            series.weight.push([utcDay, Math.round(current.latest.weight.value * 100) / 100]);
+            series.pulse.push([utcDay, current.latest.pulse.value]);
+            series.diasPressure.push([utcDay, current.latest.diasPressure.value]);
+            series.sysPressure.push([utcDay, current.latest.sysPressure.value]);
+          }
+        }
+        
+        _addAxisAndSeries('weight', 'Weight', series.weight);
+        _addAxisAndSeries('pulse', 'Pulse', series.pulse);
+        _addAxisAndSeries('diasPressure', 'Dias. pressure', series.diasPressure);
+        _addAxisAndSeries('sysPressure', 'Sys. pressure', series.sysPressure);
+                
+        _chart.redraw();
+      });
+    }
+	};
+  
+  // Make login dialog to be unusable
+  var _disableLoginDialog = function() {
+    $( "#username" ).textinput( "disable" );
+    $( "#password" ).textinput( "disable" );
+    $( "#login-btn" ).button( "disable" );
+  };
+
+  _getUserData = function(username, password) {
+    // Create authorization header for queries
+    var credentials = 'Basic ' + Base64.encode(username + ":" + password);
+    
+    // First we check the services available for the user
+    // If the call is successfull we consider credentials to be ok
+    var apicall = 'user/services/';
+    var myurl = baseurl + apicall;
+    $.ajax(
+      {
+        url: myurl,
+        type: 'GET',
+        datatype: 'json',
+        headers: {
+          "Authorization": credentials
+        },
+        statusCode: {
+          401: function() {
+            alert("Login failed");
+            $("#login-msg").text("Sorry, login failed!");
+          }
+        }
+      } 
+    ).done(
+      function(data) {
+        // If the response is not yet parsed, parse it
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        if(json.user_info.username) {
+          userData.services = json.services_linked;
+          if(json.services_linked.indexOf('beddit') != -1) {
+            userData.beddit = true;
+          } if(json.services_linked.indexOf('withings') != -1) {
+            userData.withings = true;
+          } if(json.services_linked.indexOf('fitbit') != -1) {
+            userData.fitbit = true;
+          }
+          $("#servicestext").text(" (" + userData.services.toString() + ") ");
+          userData.calendars = json.calendars;
+          userData.username = username;
+          userData.credentials = credentials;
+          if(typeof(json.user_info.city) != undefined) userData.address = json.user_info.city;
+          $("#login-msg").text(" Hi " + json.user_info.username + ", login successful.");
+          $(".headertext").text(json.user_info.firstName + "'s WellMU dashboard");
+          $("div.login").hide(1000);
+          $.mobile.changePage("#multiple-day-page");
+          $( ".show-after-init" ).css({"visibility":"visible"});
+          _disableLoginDialog();
+          _init();
+          wellnessAPISingleDay.init();
+        } else {
+          // Login unsuccessful, does not work as the server fails to respond
+          $("#login-msg").text("Sorry, login failed!");
+        }
+      }
+    );
+  };
+
+	return {
+		init: _init,
+		period: _period,
+		setPeriod: _setPeriod,
+		hideOtherSeries: _hideOtherSeries,
+		register: function(path, cb) {
+      runtimePopup(path, cb);
+		},
+		login: function() {
+      // Read the username and password. Try to retrieve user basic data.
+			var username = $("#username").val();
+			var password = $("#password").val();
+			if(username.length > 0 && username.length < 20 && password.length > 0) {
+				_getUserData(username, password);
+			}
+		}
+	};
+	
 }());
 
 var Base64 = {
@@ -2071,3 +2469,116 @@ function runtimePopup(path, popupafterclose) {
     }
   });
 }
+
+function gup( name ){
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href ); 
+   if( results == null )    return "";  
+  else    return results[1];
+}
+
+
+// jqm.page.params.js - version 0.1
+// Copyright (c) 2011, Kin Blas
+// All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//     * Neither the name of the <organization> nor the
+//       names of its contributors may be used to endorse or promote products
+//       derived from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+(function( $, window, undefined ) {
+
+// Given a query string, convert all the name/value pairs
+// into a property/value object. If a name appears more than
+// once in a query string, the value is automatically turned
+// into an array.
+function queryStringToObject( qstr )
+{
+	var result = {},
+		nvPairs = ( ( qstr || "" ).replace( /^\?/, "" ).split( /&/ ) ),
+		i, pair, n, v;
+
+	for ( i = 0; i < nvPairs.length; i++ ) {
+		var pstr = nvPairs[ i ];
+		if ( pstr ) {
+			pair = pstr.split( /=/ );
+			n = pair[ 0 ];
+			v = pair[ 1 ];
+			if ( result[ n ] === undefined ) {
+				result[ n ] = v;
+			} else {
+				if ( typeof result[ n ] !== "object" ) {
+					result[ n ] = [ result[ n ] ];
+				}
+				result[ n ].push( v );
+			}
+		}
+	}
+
+	return result;
+}
+
+// The idea here is to listen for any pagebeforechange notifications from
+// jQuery Mobile, and then muck with the toPage and options so that query
+// params can be passed to embedded/internal pages. So for example, if a
+// changePage() request for a URL like:
+//
+//    http://mycompany.com/myapp/#page-1?foo=1&bar=2
+//
+// is made, the page that will actually get shown is:
+//
+//    http://mycompany.com/myapp/#page-1
+//
+// The browser's location will still be updated to show the original URL.
+// The query params for the embedded page are also added as a property/value
+// object on the options object. You can access it from your page notifications
+// via data.options.pageData.
+$( document ).bind( "pagebeforechange", function( e, data ) {
+
+	// We only want to handle the case where we are being asked
+	// to go to a page by URL, and only if that URL is referring
+	// to an internal page by id.
+
+	if ( typeof data.toPage === "string" ) {
+		var u = $.mobile.path.parseUrl( data.toPage );
+		if ( $.mobile.path.isEmbeddedPage( u ) ) {
+
+			// The request is for an internal page, if the hash
+			// contains query (search) params, strip them off the
+			// toPage URL and then set options.dataUrl appropriately
+			// so the location.hash shows the originally requested URL
+			// that hash the query params in the hash.
+
+			var u2 = $.mobile.path.parseUrl( u.hash.replace( /^#/, "" ) );
+			if ( u2.search ) {
+				if ( !data.options.dataUrl ) {
+					data.options.dataUrl = data.toPage;
+				}
+				data.options.pageData = queryStringToObject( u2.search );
+				data.toPage = u.hrefNoHash + "#" + u2.pathname;
+			}
+		}
+	}
+});
+
+})( jQuery, window );

@@ -3,22 +3,27 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>WellMU Dashboard</title>
-		<link rel="stylesheet" type="text/css" href="style.css">
+
 		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
 		<link rel="stylesheet" href="./lib/mobiscroll/css/mobiscroll.custom-2.4.5.min.css" />
 		<link rel="stylesheet" href="./lib/bootstrap/css/bootstrap.css" />
+		<link rel="stylesheet" type="text/css" href="style.css">		
 		
 		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
-		<!-- <script src="http://masonry.desandro.com/jquery.masonry.min.js"></script> -->
 
 		<script src="./lib/bootstrap/js/bootstrap.js"></script>
-
+		
 		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" ></script>
-    <script src="./lib/highcharts/js/highcharts.js"></script>  
-		<!-- <script src="http://code.highcharts.com/modules/exporting.js"></script> -->
+
+    <script src="./lib/highcharts/js/highcharts.js"></script>
 		<script src="http://omnipotent.net/jquery.sparkline/2.1.1/jquery.sparkline.js"></script>
     <script src="http://code.highcharts.com/highcharts-more.js"></script>
+    
+    <!-- Additional files for the Highslide popup effect -->
+    <!-- <script type="text/javascript" src="http://www.highcharts.com/highslide/highslide-full.min.js"></script> -->
+    <!-- <script type="text/javascript" src="http://www.highcharts.com/highslide/highslide.config.js" charset="utf-8"></script> -->
+    <!-- <link rel="stylesheet" type="text/css" href="http://www.highcharts.com/highslide/highslide.css" /> -->
 
 		<script src="./lib/amplify-1.1.0/amplify.js" ></script>
 		<script type="text/javascript" src="./lib/date.js"></script>
@@ -26,13 +31,18 @@
 	</head>
 	<body>
 		<script type="text/javascript">
-			$( "#button-prev" ).live("click", function(){
-				wellnessAPI.prevDay();
-			});
-			$( "#button-next" ).live("click", function(){
-				wellnessAPI.nextDay();
-			});
-			$(document).ready(function() {
+      $(document).ready(function() {
+        $(document).bind("pagebeforechange", function( event, data ) {
+          $.mobile.pageData = (data && data.options && data.options.pageData)
+            ? data.options.pageData
+            : null;
+        });
+        $( "#button-prev" ).live("click", function(){
+          wellnessAPISingleDay.prevDay();
+        });
+        $( "#button-next" ).live("click", function(){
+          wellnessAPISingleDay.nextDay();
+        });
 				var today = new Date();
 				$('#datescroller').mobiscroll().date({
 					theme: 'jqm',
@@ -42,27 +52,102 @@
 					dateOrder: 'mmD ddyy',
 					maxDate: today,
 					onSelect: function(dateText, instance) { 
-						wellnessAPI.setDate($('#datescroller').mobiscroll('getDate'));
+						wellnessAPISingleDay.setDate($('#datescroller').mobiscroll('getDate'));
 						event.stopPropagation();
 						return instance;
 					}
 				});
-				setTimeout('$( "#password-dialog" ).popup( "open" )', 500);
+				$('#single-day-page').live('pageshow',function(event, ui){
+          if(gup('noDateChange') != 'true') {
+            var date = gup('date');
+            wellnessAPISingleDay.setDate(date);
+          }
+        });
+				$('#single-day-page').live('pageshow',function(event, ui){
+          if(gup('period') != '') {
+            var period = parseInt(gup('date'));
+            $("#radio-choice-" + period).attr("checked",true).checkboxradio("refresh");
+          }
+        });
+        $(".select-choice").bind( "change", function(event, ui) {
+          console.log(event, ui);
+          console.log(this.id, $(this).val());
+          if ($(this).val() === '') return;
+          if(this.id == 'select-choice-1') {
+            $("#select-choice-2 option[disabled=disabled]").removeAttr('disabled');
+            $("#select-choice-2 option:contains('" + $(this).val() + "')").attr('disabled','disabled');
+          } else {
+            $("#select-choice-1 option[disabled=disabled]").removeAttr('disabled');
+            $("#select-choice-1 option:contains('" + $(this).val() + "')").attr('disabled','disabled');
+          }
+          if($('#select-choice-2').val() != '' && $('#select-choice-1').val() != '') {
+            wellnessAPI.hideOtherSeries($('#select-choice-2').val(), $('#select-choice-1').val())
+          }
+        });
+        $("input[name=radio-choice]").bind( "change", function(event, ui) {
+          console.log(this.id, $(this).val());
+          wellnessAPI.setPeriod(parseInt($(this).val()));
+        });
+        setTimeout('$.mobile.changePage("#password-dialog", "pop", true, true);', 500);
 			});
 		</script>
 		
-		<div data-role="page"> 
+		<div data-role="page" id="multiple-day-page"> 
 			<div data-role="header">
-				<h1><span id="usertext">WellMU Dashboard</span></h1>
+				<h1><span class="headertext">WellMU Dashboard</span></h1>
+				<a rel='close' data-role='button' href='#single-day-page?noDateChange=true' class="ui-btn-right" data-icon="arrow-r">Daily view</a>
 			</div>
 			<div data-role="content">
-				<div style="text-align: center; display:block; width:auto; visibility:hidden" id="dateselect">
+			
+        <div class="ui-grid-a">
+          <div class="ui-block-a">
+            <div data-role="fieldcontain" id="variable-select-choices" class="show-after-init">
+              <fieldset data-role="controlgroup" data-type="horizontal" data-role="fieldcontain" data-mini="true">
+                <legend>Select variables to show:</legend>
+                <select name="select-choice-1" id="select-choice-1" class="select-choice">
+                  <option value="" selected>- Select -</option>
+                </select>
+                <select name="select-choice-2" id="select-choice-2" class="select-choice">
+                  <option value="" selected>- Select -</option>
+                </select>
+              </fieldset>
+            </div>
+          </div>
+          <div class="ui-block-b">
+            <div data-role="fieldcontain" class="show-after-init">
+              <fieldset data-role="controlgroup" data-type="horizontal" data-role="fieldcontain" data-mini="true">
+                <legend>Time period length (days):</legend>
+                <input type="radio" name="radio-choice" id="radio-choice-7" value="7" checked="checked" />
+                <label for="radio-choice-7">7</label>
+                <input type="radio" name="radio-choice" id="radio-choice-30" value="30" />
+                <label for="radio-choice-30">30</label>
+                <input type="radio" name="radio-choice" id="radio-choice-60" value="60" />
+                <label for="radio-choice-60">60</label>
+                <input type="radio" name="radio-choice" id="radio-choice-180" value="180" />
+                <label for="radio-choice-180">180</label>
+              </fieldset>
+            </div>   
+          </div>
+        </div><!-- /grid-a -->
+
+        <div id="highcharts" class="show-after-init"></div>
+      
+      </div>
+    </div>
+		
+		<div data-role="page" id="single-day-page"> 
+			<div data-role="header">
+        <a rel='close' data-role='button' href='#multiple-day-page' data-icon="delete">Close</a>
+				<h1><span class="headertext">WellMU Dashboard</span></h1>
+			</div>
+			<div data-role="content">
+				<div style="text-align: center; display:block; width:auto;" id="dateselect" class="show-after-init">
 					<input type="button" data-mini="true" data-icon="arrow-l" id="button-prev" data-theme="b" data-inline="true" value="Prev Day" />
 					<input name="datescroller" data-mini="true" id="datescroller" class="i-txt" data-theme="b" style="display:inline-block;width:auto;" />
 					<input type="button" data-mini="true" data-icon="arrow-r" id="button-next" data-theme="b" data-inline="true" value="Next Day" />
 				</div>
 
-        <div id="tab-container" style="visibility:hidden">
+        <div id="tab-container" class="show-after-init">
           <ul class="nav nav-tabs" data-tabs="tabs">
           </ul>
 
@@ -74,30 +159,31 @@
 						<span id="datetext"></span>
 						<span id="servicestext"></span>
 				</p>
-
-				<div data-role="popup" id="password-dialog" data-dismissible="false">
-					<div data-role="content">
-						<p><span id="login-msg">Enter your credentials</span></p>
-						<form action="javascript:void(0);">
-							<fieldset>
-								<div data-role="fieldcontain">
-		 			       	<input type="text" size="15" placeholder="username" name="username" id="username" />
-								</div>
-								<div data-role="fieldcontain">
-		 	  		     	<input type="password" size="15" placeholder="password" name="password" id="password"  autocomplete="off" />
-								</div>
- 		    		   	<button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
-							</fieldset>
-						</form>
-						<p class="register">No accout? <a href="#" data-rel="dialog" onClick="$( '#password-dialog' ).popup( 'close' ); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $( \'#password-dialog\' ).popup( \'open\' ); } )', 500);">Register!</a></p>
-					</div>
-				</div>
-      </div>
-      <div>
-        <div id="highchart"></div>
-        <div id="gantt"></div>          
-      </div>				
+        <div class="show-after-init">
+          <div id="highchart"></div>
+          <div id="gantt"></div>          
+        </div>
+      </div>   
     </div>
+    
+    <div data-role="dialog" id="password-dialog" data-dismissible="false">
+      <div data-role="content">
+        <p><span id="login-msg">Enter your credentials</span></p>
+        <form action="javascript:void(0);">
+          <fieldset>
+            <div data-role="fieldcontain">
+              <input type="text" size="15" placeholder="username" name="username" id="username" />
+            </div>
+            <div data-role="fieldcontain">
+              <input type="password" size="15" placeholder="password" name="password" id="password" autocomplete="on" />
+            </div>
+            <button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
+          </fieldset>
+        </form>
+        <p class="register">No accout? <a href="#" data-rel="dialog" onClick="window.history.back(); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $.mobile.changePage(\'#password-dialog\', \'pop\', true, true); } )', 500);">Register!</a></p>
+      </div>
+    </div>
+
     <!-- Google Analytics -->
     <script type="text/javascript">
 

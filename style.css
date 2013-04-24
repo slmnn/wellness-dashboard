@@ -13,22 +13,17 @@ table
  margin-right: auto;
  width: 90%;
 }
-div.login {
-	font:15px arial,sans-serif;	
+div.show-after-init {
+  visibility: hidden;
+}
+div#password-dialog {
 	text-align: center;
-	border: gray solid 3px;
-	border-radius: 4px;
-	background: #fffaf6;
-	width: 340px;
+	width: 240px;
+	padding: 15px;
 	margin: 60px auto 30px;
   margin-left:-170px;
   left:50%;
-	padding: 15px;
 	position: absolute;
-	box-shadow:
-        0 2px 2px rgba(0,0,0,0.2),        
-        0 1px 5px rgba(0,0,0,0.2),        
-        0 0 0 12px rgba(255,255,255,0.4); 
 }
 p.register {
 	font:12px arial,sans-serif;
