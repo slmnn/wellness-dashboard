@@ -1927,7 +1927,7 @@ var wellnessAPI =(function(wellnessAPI) {
               click: function() {
                 $.mobile.changePage(
                   '#single-day-page?date=' + Highcharts.dateFormat('%Y-%m-%d', this.x), 
-                  {transition: 'pop'}
+                  {transition: 'flip'}
                 );
                 
                 //hs.htmlExpand(null, {
@@ -2103,10 +2103,10 @@ var wellnessAPI =(function(wellnessAPI) {
           var day = Date.parse(current.date);
           if(day != null) {
             var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-            series.minutesAsleep.push([utcDay, current.minutesAsleep]);
-            series.minutesAwake.push([utcDay, current.minutesAwake]);
-            series.efficiency.push([utcDay, Math.round(current.efficiency * 100) / 100]);
-            series.minutesToFallAsleep.push([utcDay, current.minutesToFallAsleep]);
+            series.minutesAsleep.push([utcDay, isNaN(current.minutesAsleep) == false ? current.minutesAsleep : null]);
+            series.minutesAwake.push([utcDay, isNaN(current.minutesAwake) == false ? current.minutesAwake : null]);
+            series.efficiency.push([utcDay, isNaN(current.efficiency) == false ? Math.round(current.efficiency * 100) / 100 : null]);
+            series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep) == false ? current.minutesToFallAsleep : null]);
           }
         }
         

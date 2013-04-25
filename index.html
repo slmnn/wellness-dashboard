@@ -88,14 +88,14 @@
           console.log(this.id, $(this).val());
           wellnessAPI.setPeriod(parseInt($(this).val()));
         });
-        setTimeout('$.mobile.changePage("#password-dialog", "pop", true, true);', 500);
+        setTimeout('$.mobile.changePage("#password-dialog", "none", true, true);', 500); 
 			});
 		</script>
 		
 		<div data-role="page" id="multiple-day-page"> 
 			<div data-role="header">
 				<h1><span class="headertext">WellMU Dashboard</span></h1>
-				<a rel='close' data-role='button' href='#single-day-page?noDateChange=true' class="ui-btn-right" data-icon="arrow-r">Daily view</a>
+				<a rel='close' data-role='button' href='#single-day-page?noDateChange=true' data-transition="flip" class="ui-btn-right" data-icon="arrow-r">Daily view</a>
 			</div>
 			<div data-role="content">
 			
@@ -137,7 +137,7 @@
 		
 		<div data-role="page" id="single-day-page"> 
 			<div data-role="header">
-        <a rel='close' data-role='button' href='#multiple-day-page' data-icon="delete">Close</a>
+        <a rel='close' data-role='button' data-transition="flip" href='#multiple-day-page' data-icon="delete">Close</a>
 				<h1><span class="headertext">WellMU Dashboard</span></h1>
 			</div>
 			<div data-role="content">
@@ -180,7 +180,7 @@
             <button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
           </fieldset>
         </form>
-        <p class="register">No accout? <a href="#" data-rel="dialog" onClick="window.history.back(); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $.mobile.changePage(\'#password-dialog\', \'pop\', true, true); } )', 500);">Register!</a></p>
+        <p class="register">No accout? <a href="#" data-rel="dialog" onClick="window.history.back(); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $.mobile.changePage(\'#password-dialog\', \'none\', true, true); } )', 500);">Register!</a></p>
       </div>
     </div>
 
