@@ -2109,7 +2109,7 @@ var wellnessAPI =(function(wellnessAPI) {
             series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep) == false ? current.minutesToFallAsleep : null]);
           }
         }
-        
+         
         _addAxisAndSeries('minutesAwake', 'Min. awake', series.minutesAwake);
         _addAxisAndSeries('minutesAsleep', 'Min. asleep', series.minutesAsleep);
         _addAxisAndSeries('efficiency', 'Sleep efficiency', series.efficiency, true);
@@ -2135,10 +2135,10 @@ var wellnessAPI =(function(wellnessAPI) {
           var day = Date.parse(current.date);
           if(day != null) {
             var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-            series.steps.push([utcDay, current.summary.steps]);
-            series.minutesSedentary.push([utcDay, current.summary.sedentaryMinutes]);
-            series.activityCalories.push([utcDay, current.summary.activityCalories]);
-            series.activeScore.push([utcDay, current.summary.activeScore]);
+            series.steps.push([utcDay, isNaN(current.summary.steps) == false ? current.summary.steps : null]);
+            series.minutesSedentary.push([utcDay, isNaN(current.summary.sedentaryMinutes) == false ? current.summary.sedentaryMinutes : null]);
+            series.activityCalories.push([utcDay, isNaN(current.summary.activityCalories) == false ? current.summary.activityCalories : null]);
+            series.activeScore.push([utcDay, isNaN(current.summary.activeScore) == false ? current.summary.activeScore : null]);
           }
         }
         
@@ -2171,10 +2171,10 @@ var wellnessAPI =(function(wellnessAPI) {
           var day = Date.parse(current.date);
           if(day != null) {
             var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-            series.weight.push([utcDay, Math.round(current.latest.weight.value * 100) / 100]);
-            series.pulse.push([utcDay, current.latest.pulse.value]);
-            series.diasPressure.push([utcDay, current.latest.diasPressure.value]);
-            series.sysPressure.push([utcDay, current.latest.sysPressure.value]);
+            series.weight.push([utcDay, isNaN(current.latest.weight.value) == false ? Math.round(current.latest.weight.value * 100) / 100 : null]);
+            series.pulse.push([utcDay, isNaN(current.latest.pulse.value) == false ? current.latest.pulse.value : null]);
+            series.diasPressure.push([utcDay, isNaN(current.latest.diasPressure.value) == false ? current.latest.diasPressure.value : null]);
+            series.sysPressure.push([utcDay, isNaN(current.latest.sysPressure.value) == false ? current.latest.sysPressure.value : null]);
           }
         }
         
