@@ -91,7 +91,27 @@
         setTimeout('$.mobile.changePage("#password-dialog", "none", true, true);', 500); 
 			});
 		</script>
-		
+    
+    <!-- Login -->
+    <div data-role="dialog" id="password-dialog" data-dismissible="false">
+      <div data-role="content">
+        <p><span id="login-msg">Enter your credentials</span></p>
+        <form action="javascript:void(0);">
+          <fieldset>
+            <div data-role="fieldcontain">
+              <input type="text" size="15" placeholder="username" name="username" id="username" />
+            </div>
+            <div data-role="fieldcontain">
+              <input type="password" size="15" placeholder="password" name="password" id="password" autocomplete="on" />
+            </div>
+            <button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
+          </fieldset>
+        </form>
+        <p class="register">No accout? <a href="#" data-rel="dialog" onClick="window.history.back(); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $.mobile.changePage(\'#password-dialog\', \'none\', true, true); } )', 500);">Register!</a></p>
+      </div>
+    </div>
+    
+    <!-- Longer timeline -->
 		<div data-role="page" id="multiple-day-page"> 
 			<div data-role="header">
 				<h1><span class="headertext">WellMU Dashboard</span></h1>
@@ -135,9 +155,10 @@
       </div>
     </div>
 		
-		<div data-role="page" id="single-day-page"> 
-			<div data-role="header">
-        <a rel='close' data-role='button' data-transition="flip" href='#multiple-day-page' data-icon="delete">Close</a>
+    <!-- Detailed one day view -->
+    <div data-role="page" id="single-day-page"> 
+      <div data-role="header">
+        <a rel='close' data-role='button' data-transition="flip" href='#multiple-day-page' data-icon="arrow-l">Overview</a>
 				<h1><span class="headertext">WellMU Dashboard</span></h1>
 			</div>
 			<div data-role="content">
@@ -164,24 +185,6 @@
           <div id="gantt"></div>          
         </div>
       </div>   
-    </div>
-    
-    <div data-role="dialog" id="password-dialog" data-dismissible="false">
-      <div data-role="content">
-        <p><span id="login-msg">Enter your credentials</span></p>
-        <form action="javascript:void(0);">
-          <fieldset>
-            <div data-role="fieldcontain">
-              <input type="text" size="15" placeholder="username" name="username" id="username" />
-            </div>
-            <div data-role="fieldcontain">
-              <input type="password" size="15" placeholder="password" name="password" id="password" autocomplete="on" />
-            </div>
-            <button type="submit" data-theme="b" id="login-btn" onclick="wellnessAPI.login();" value="submit">Login</button>
-          </fieldset>
-        </form>
-        <p class="register">No accout? <a href="#" data-rel="dialog" onClick="window.history.back(); setTimeout('wellnessAPI.register(\'https://wellness.cs.tut.fi/user/register/\', function() { $.mobile.changePage(\'#password-dialog\', \'none\', true, true); } )', 500);">Register!</a></p>
-      </div>
     </div>
 
     <!-- Google Analytics -->
