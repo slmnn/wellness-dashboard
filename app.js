@@ -1697,6 +1697,9 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
     console.log('Initializing single day view', date, gup('date'));
     _currentday = Date.parse(gup('date'));
     if(_currentday == null) _currentday = new Date(_today.addDays(-1));
+    if(userData.username == 'demo') {
+      _currentday = new Date(Date.parse('17.4.2013'));
+    }
 		$("#dateselect").css({"visibility":"visible"});
 		$("#tab-container").css({"visibility":"visible"});
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
@@ -2054,7 +2057,11 @@ var wellnessAPI =(function(wellnessAPI) {
 	
 	// Initialize the application based on available services
 	var _init = function() {
-		_currentday = new Date(_today.clone().add({days: (_period * -1)}));
+    if(userData.username != 'demo') {
+      _currentday = new Date(_today.clone().add({days: (_period * -1)}));
+    } else {
+      _currentday = new Date(Date.parse('15.4.2013'));
+    }
 		
 		// Create something to draw on
     if($('#series-container').length == 0) {
