@@ -663,7 +663,7 @@ var ganttUI = (function(ganttUI) {
   }
 }());
 
-var bulletSparkUI = (function(weatherUI) {
+var bulletSparkUI = (function(bulletSparkUI) {
 	var _init = function() {
     if($(".activity_variables").length == 0) {
       var targetDivID = tabUI.newTab('Activities');
@@ -781,6 +781,37 @@ var weatherUI = (function(weatherUI) {
 	};
 	return {
 		init: _init
+	}
+}());
+
+var twitterUI = (function(twitterUI) {
+	var _init = function() {
+		amplify.subscribe('tweets_available', function(data) {
+			console.log('Twitter data for ' + data[0].created_at);
+			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+			var weekday = weekdays[Date.parse(data[0].created_at).getDay()];
+			if($("#some_variables-container").length == 0) {
+        var targetDivID = tabUI.newTab('Twitter');
+        var HTML = $('<div class="some_variables-container" id="some_variables-container"></div>');
+        $('#' + targetDivID).append(HTML);
+			}
+			var HTML = $('<div id="twitter_variables_'+ weekday +'" class="twitter_variables table-wrapper"><b>Tweets (' + weekday + ')</b></br>' +
+        '<table id="twitter_variables_table"></table>' +
+        '</div>');
+			$("#some_variables-container").append(HTML);
+      for(var i = 0; i < data.length; i++) {
+        var date = Date.parse(data[i].created_at);
+        var time = date.toString('hh:mm')
+        var HTML = $('<tr><td class="twitterdata">' + time + '</td><td class="twitterdata">' + data[i].text + '</td></tr>');
+        $("#twitter_variables_table").append(HTML);
+      }
+		});
+	};
+	return {
+		init: _init,
+		clear: function() {
+      $('#some_variables-container').remove();
+		}
 	}
 }());
 
@@ -1506,6 +1537,16 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
       }
 		});
 	};
+	
+  var _getTwitterData =	function() {
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		_getData('twitter/api/tweets/' + daypath + '/', function(data) {
+      var tweets = JSON.parse(data).data;
+      if(tweets.length > 0) {
+        amplify.publish('tweets_available', tweets);
+      }
+		});
+	};
 
 	var _getCalendarData = function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
@@ -1520,6 +1561,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
         console.log("Requesting from server " + url);
         _getData(url, function(data) {
           var json = JSON.parse(data);
+		  if(typeof json.error != 'undefined')
           amplify.store(url, data, { expires: 12*60*(60*1000*Math.random()) });
           amplify.publish('calendar_events', {'date': _currentday.toString("yyyy-MM-dd"), 'events': json});
         });
@@ -1759,6 +1801,9 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 			
 			analysisUI.init();
 			_getAnalysisData();
+			
+			twitterUI.init();
+			_getTwitterData();
 		}
 	};
 
@@ -1787,6 +1832,9 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
       calendarUI.clear();
       _getCalendarData();
     }
+    
+    twitterUI.clear();
+    _getTwitterData();
 
     $("div[id*=weather_variables-container]").remove();
 		_getWeatherData(_currentday);
@@ -2094,7 +2142,8 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _populateChart = function() {		
     // Sleep
 		if(userData.fitbit || userData.beddit) {
-      _getData('api/unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('api/unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/?omit_fields=fitbit,beddit', function(data) {
+
         var json = $.parseJSON(data);
         
         var series = { 
@@ -2122,6 +2171,28 @@ var wellnessAPI =(function(wellnessAPI) {
         _addAxisAndSeries('efficiency', 'Sleep efficiency', series.efficiency, true);
         _addAxisAndSeries('minutesToFallAsleep', 'Min. to fall asleep', series.minutesToFallAsleep);
        
+        _chart.redraw();
+      });
+      _getData('api/analysis/sleepeffma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+        var json = $.parseJSON(data);
+        var result = []
+        for( var i = 0; i < json.length; i++ ) {
+          var day = Date.parse(json[i][0]);
+          var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+          result.push([utcDay, isNaN(json[i][1]) == false ? Math.round(json[i][1]*100)/100 : null])
+        }
+        _addAxisAndSeries('sleepeffma', 'Sleep efficiency (Av.)', result);
+        _chart.redraw();
+      });
+      _getData('api/analysis/sleeptimema/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+        var json = $.parseJSON(data);
+        var result = []
+        for( var i = 0; i < json.length; i++ ) {
+          var day = Date.parse(json[i][0]);
+          var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+          result.push([utcDay, isNaN(json[i][1]) == false ? Math.round(json[i][1]*100)/100 : null])
+        }
+        _addAxisAndSeries('sleeptimema', 'Sleep time (Av.)', result);
         _chart.redraw();
       });
     }

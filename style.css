@@ -105,3 +105,7 @@ td.weatherdata_value {
   font-weight: bold;
   text-align: right;
 }
+td.twitterdata {
+text-align: left;
+vertical-align: top;
+}
