@@ -7,6 +7,7 @@ var userData = (function(userData) {
 	var _beddit = false;
 	var _withings = false;
 	var _fitbit = false;
+	var _twitter = false;
 	var _nightstart = null;
 	var _nightend = null;
 	return {
@@ -17,7 +18,8 @@ var userData = (function(userData) {
 		calendars: _calendars,
 		beddit: _beddit,
 		withings: _withings,
-		fitbit: _fitbit
+		fitbit: _fitbit,
+		twitter: _twitter
 	}
 }());
 
@@ -787,23 +789,30 @@ var weatherUI = (function(weatherUI) {
 var twitterUI = (function(twitterUI) {
 	var _init = function() {
 		amplify.subscribe('tweets_available', function(data) {
-			console.log('Twitter data for ' + data[0].created_at);
-			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-			var weekday = weekdays[Date.parse(data[0].created_at).getDay()];
+
 			if($("#some_variables-container").length == 0) {
         var targetDivID = tabUI.newTab('Twitter');
         var HTML = $('<div class="some_variables-container" id="some_variables-container"></div>');
         $('#' + targetDivID).append(HTML);
 			}
-			var HTML = $('<div id="twitter_variables_'+ weekday +'" class="twitter_variables table-wrapper"><b>Tweets (' + weekday + ')</b></br>' +
-        '<table id="twitter_variables_table"></table>' +
-        '</div>');
-			$("#some_variables-container").append(HTML);
-      for(var i = 0; i < data.length; i++) {
-        var date = Date.parse(data[i].created_at);
-        var time = date.toString('hh:mm')
-        var HTML = $('<tr><td class="twitterdata">' + time + '</td><td class="twitterdata">' + data[i].text + '</td></tr>');
-        $("#twitter_variables_table").append(HTML);
+			if(data.length > 0) {
+        console.log('Twitter data for ' + data[0].created_at);
+        var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var weekday = weekdays[Date.parse(data[0].created_at).getDay()];			
+        var HTML = $('<div id="twitter_variables_'+ weekday +'" class="twitter_variables table-wrapper"><b>Tweets (' + weekday + ')</b></br>' +
+          '<table id="twitter_variables_table"></table>' +
+          '</div>');
+        $("#some_variables-container").append(HTML);
+        for(var i = 0; i < data.length; i++) {
+          var date = Date.parse(data[i].created_at);
+          var time = date.toString('hh:mm')
+          var HTML = $('<tr><td class="twitterdata">' + time + '</td><td class="twitterdata">' + data[i].text + '</td></tr>');
+          $("#twitter_variables_table").append(HTML);
+        }
+      }
+      else {
+        var HTML = $('<div class="twitter_variables table-wrapper"><p><b>No tweets for today!</b></p></div>');
+        $("#some_variables-container").append(HTML);
       }
 		});
 	};
@@ -1020,6 +1029,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
           $('#' + targetDivID).append(HTML);
         }
         var common = json.data[i].common;
+        if(common == null) continue;
         if(common.source == null) continue;
         var daynumber = Date.parse(common.date).getDay();       
         // $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
@@ -1542,9 +1552,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('twitter/api/tweets/' + daypath + '/', function(data) {
       var tweets = JSON.parse(data).data;
-      if(tweets.length > 0) {
-        amplify.publish('tweets_available', tweets);
-      }
+      amplify.publish('tweets_available', tweets);
 		});
 	};
 
@@ -1802,8 +1810,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 			analysisUI.init();
 			_getAnalysisData();
 			
-			twitterUI.init();
-			_getTwitterData();
+			if(userData.twitter) {
+        twitterUI.init();
+        _getTwitterData();
+			}
 		}
 	};
 
@@ -1833,8 +1843,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
       _getCalendarData();
     }
     
-    twitterUI.clear();
-    _getTwitterData();
+    if(userData.twitter) {
+      twitterUI.clear();
+      _getTwitterData();
+    }
 
     $("div[id*=weather_variables-container]").remove();
 		_getWeatherData(_currentday);
@@ -1903,6 +1915,8 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	            userData.withings = true;
 						} if(json.services_linked.indexOf('fitbit') != -1) {
 	            userData.fitbit = true;
+						} if(json.services_linked.indexOf('twitter') != -1) {
+	            userData.twitter = true;
 						}
 						$("#servicestext").text(" (" + userData.services.toString() + ") ");
 						userData.calendars = json.calendars;
@@ -2154,8 +2168,7 @@ var wellnessAPI =(function(wellnessAPI) {
         };
         for(var i = 0; i < json.data.length; i++) {
           var current = json.data[i].common;
-          if(typeof(current) == 'undefined') continue;
-          if(typeof(current) == 'undefined') continue;
+          if(typeof(current) == 'undefined' || current == null) continue;
           var day = Date.parse(current.date);
           if(day != null) {
             var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
@@ -2309,7 +2322,9 @@ var wellnessAPI =(function(wellnessAPI) {
             userData.withings = true;
           } if(json.services_linked.indexOf('fitbit') != -1) {
             userData.fitbit = true;
-          }
+          } if(json.services_linked.indexOf('twitter') != -1) {
+	            userData.twitter = true;
+					}
           $("#servicestext").text(" (" + userData.services.toString() + ") ");
           userData.calendars = json.calendars;
           userData.username = username;
