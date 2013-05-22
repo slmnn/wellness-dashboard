@@ -805,7 +805,7 @@ var twitterUI = (function(twitterUI) {
         $("#some_variables-container").append(HTML);
         for(var i = 0; i < data.length; i++) {
           var date = Date.parse(data[i].created_at);
-          var time = date.toString('hh:mm')
+          var time = date.toString('HH:mm')
           var text = processTweetLinks(data[i].text)
           var HTML = $('<tr><td class="twitterdata"><b>' + time + '</b></td><td class="twitterdata">' + text + '</td></tr>');
           $("#twitter_variables_table").append(HTML);
@@ -2219,7 +2219,7 @@ var wellnessAPI =(function(wellnessAPI) {
           var json = $.parseJSON(data);
         else 
           var json = data;
-        if(typeof json.error != undefined) {
+        if(typeof json.error != "undefined") {
           console.log(json.error);
           return;
         }
@@ -2238,7 +2238,7 @@ var wellnessAPI =(function(wellnessAPI) {
           var json = $.parseJSON(data);
         else 
           var json = data;
-        if(typeof json.error != undefined) {
+        if(typeof json.error != "undefined") {
           console.log(json.error);
           return;
         }
