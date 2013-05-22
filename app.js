@@ -806,7 +806,8 @@ var twitterUI = (function(twitterUI) {
         for(var i = 0; i < data.length; i++) {
           var date = Date.parse(data[i].created_at);
           var time = date.toString('hh:mm')
-          var HTML = $('<tr><td class="twitterdata">' + time + '</td><td class="twitterdata">' + data[i].text + '</td></tr>');
+          var text = processTweetLinks(data[i].text)
+          var HTML = $('<tr><td class="twitterdata"><b>' + time + '</b></td><td class="twitterdata">' + text + '</td></tr>');
           $("#twitter_variables_table").append(HTML);
         }
       }
@@ -2178,11 +2179,14 @@ var wellnessAPI =(function(wellnessAPI) {
             series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep) == false ? current.minutesToFallAsleep : null]);
           }
         }
-         
-        _addAxisAndSeries('minutesAwake', 'Min. awake', series.minutesAwake);
-        _addAxisAndSeries('minutesAsleep', 'Min. asleep', series.minutesAsleep);
-        _addAxisAndSeries('efficiency', 'Sleep efficiency', series.efficiency, true);
-        _addAxisAndSeries('minutesToFallAsleep', 'Min. to fall asleep', series.minutesToFallAsleep);
+        if(series.minutesAwake.length > 0)
+          _addAxisAndSeries('minutesAwake', 'Min. awake', series.minutesAwake);
+        if(series.minutesAsleep.length > 0)
+          _addAxisAndSeries('minutesAsleep', 'Min. asleep', series.minutesAsleep);
+        if(series.efficiency.length > 0)
+          _addAxisAndSeries('efficiency', 'Sleep efficiency', series.efficiency, true);
+        if(series.minutesToFallAsleep.length > 0)
+          _addAxisAndSeries('minutesToFallAsleep', 'Min. to fall asleep', series.minutesToFallAsleep);
        
         _chart.redraw();
       });
@@ -2194,7 +2198,8 @@ var wellnessAPI =(function(wellnessAPI) {
           var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
           result.push([utcDay, isNaN(json[i][1]) == false ? Math.round(json[i][1]*100)/100 : null])
         }
-        _addAxisAndSeries('sleepeffma', 'Sleep efficiency (Av.)', result);
+        if(result.length > 0)
+          _addAxisAndSeries('sleepeffma', 'Sleep efficiency (Av.)', result);
         _chart.redraw();
       });
       _getData('api/analysis/sleeptimema/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
@@ -2205,7 +2210,8 @@ var wellnessAPI =(function(wellnessAPI) {
           var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
           result.push([utcDay, isNaN(json[i][1]) == false ? Math.round(json[i][1]*100)/100 : null])
         }
-        _addAxisAndSeries('sleeptimema', 'Sleep time (Av.)', result);
+        if(result.length > 0)
+          _addAxisAndSeries('sleeptimema', 'Sleep time (Av.)', result);
         _chart.redraw();
       });
     }
@@ -2232,11 +2238,14 @@ var wellnessAPI =(function(wellnessAPI) {
             series.activeScore.push([utcDay, isNaN(current.summary.activeScore) == false ? current.summary.activeScore : null]);
           }
         }
-        
-        _addAxisAndSeries('steps', 'Steps', series.steps, true);
-        _addAxisAndSeries('minutesSedentary', 'Min. sedentary', series.minutesSedentary);
-        _addAxisAndSeries('activityCalories', 'Activity calories', series.activityCalories);
-        _addAxisAndSeries('activeScore', 'Active score', series.activeScore);
+        if(series.steps.length > 0)
+          _addAxisAndSeries('steps', 'Steps', series.steps, true);
+        if(series.minutesSedentary.length > 0)
+          _addAxisAndSeries('minutesSedentary', 'Min. sedentary', series.minutesSedentary);
+        if(series.activityCalories.length > 0)
+          _addAxisAndSeries('activityCalories', 'Activity calories', series.activityCalories);
+        if(series.activeScore.length > 0)
+          _addAxisAndSeries('activeScore', 'Active score', series.activeScore);
                 
         _chart.redraw();
       });
@@ -2268,11 +2277,14 @@ var wellnessAPI =(function(wellnessAPI) {
             series.sysPressure.push([utcDay, isNaN(current.latest.sysPressure.value) == false ? current.latest.sysPressure.value : null]);
           }
         }
-        
-        _addAxisAndSeries('weight', 'Weight', series.weight);
-        _addAxisAndSeries('pulse', 'Pulse', series.pulse);
-        _addAxisAndSeries('diasPressure', 'Dias. pressure', series.diasPressure);
-        _addAxisAndSeries('sysPressure', 'Sys. pressure', series.sysPressure);
+        if(series.weight.length > 0)
+          _addAxisAndSeries('weight', 'Weight', series.weight);
+        if(series.pulse.length > 0)
+          _addAxisAndSeries('pulse', 'Pulse', series.pulse);
+        if(series.diasPressure.length > 0)
+          _addAxisAndSeries('diasPressure', 'Dias. pressure', series.diasPressure);
+        if(series.sysPressure.length > 0)
+          _addAxisAndSeries('sysPressure', 'Sys. pressure', series.sysPressure);
                 
         _chart.redraw();
       });
@@ -2675,3 +2687,14 @@ $( document ).bind( "pagebeforechange", function( e, data ) {
 });
 
 })( jQuery, window );
+
+// http://twitter.com/search?q=%23searchterms&src=hash
+function processTweetLinks(text) {
+    var exp = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/i;
+    text = text.replace(exp, "<a href='$1' target='_blank'>$1</a>");
+    exp = /(^|\s)#(\w+)/g;
+    text = text.replace(exp, "$1<a href='http://twitter.com/search?q=%23$2&src=hash' target='_blank'>#$2</a>");
+    exp = /(^|\s)@(\w+)/g;
+    text = text.replace(exp, "$1<a href='http://www.twitter.com/$2' target='_blank'>@$2</a>");
+    return text;
+}
