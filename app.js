@@ -1007,7 +1007,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 	var _sleepCB = function(data) {
     $('.sleep_variables').remove();
-		var json = $.parseJSON(data);
+    if(typeof(data) != 'object')
+      var json = $.parseJSON(data);
+    else 
+      var json = data;
     // Sleep phases
     var rem = [];
     var deep = [];
@@ -1215,7 +1218,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	};
 
 	var _withingsCB = function(data) {
-		var json = $.parseJSON(data);		
+    if(typeof(data) != 'object')
+      var json = $.parseJSON(data);
+    else 
+      var json = data;
 		if(json.data[0].latest.weight != undefined) {
       var value = Math.round(json.data[0].latest.weight.value * 10) / 10;
       var gaugesettings = 
@@ -1502,7 +1508,11 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	var _getWeatherData =	function(date) {
 		var daypath = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + (date.getDate());
 		_getData('weather/history/' + daypath + '/', function(data) {
-      amplify.publish('weather_history', JSON.parse(data));
+      if(typeof(data) != 'object')
+        var json = $.parseJSON(data);
+      else 
+        var json = data;
+      amplify.publish('weather_history', json);
 		});
 	};
 	
@@ -1526,7 +1536,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
     analysisUI.clear();
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('api/analysis/' + daypath + '/', function(data) {
-      var analysis = JSON.parse(data);
+      if(typeof(data) != 'object')
+        var analysis = $.parseJSON(data);
+      else 
+        var analysis = data;
       for(var i = 0; i < analysis.required_user_action.length; i++) {
         var act = analysis.required_user_action[i];
         amplify.publish('analysis_possible', {
@@ -1552,7 +1565,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
   var _getTwitterData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('twitter/api/tweets/' + daypath + '/', function(data) {
-      var tweets = JSON.parse(data).data;
+      if(typeof(data) != 'object')
+        var tweets = $.parseJSON(data).data;
+      else 
+        var tweets = data.data;
       amplify.publish('tweets_available', tweets);
 		});
 	};
@@ -1581,7 +1597,10 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	var _getFitbitActivityDataset =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
-			var json = $.parseJSON(data);
+      if(typeof(data) != 'object')
+        var json = $.parseJSON(data);
+      else 
+        var json = data;
 
 			if(json.data[0].activities != undefined) {
 				var activityDay = Date.parse(json.data[0].date);
@@ -1908,6 +1927,8 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 				function(data) {
           if(typeof(data) != 'object')
             var json = $.parseJSON(data);
+          else 
+            var json = data;
 					if(json.user_info.username) {
             userData.services = json.services_linked;
 						if(json.services_linked.indexOf('beddit') != -1) {
@@ -2159,7 +2180,10 @@ var wellnessAPI =(function(wellnessAPI) {
 		if(userData.fitbit || userData.beddit) {
       _getData('api/unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/?omit_fields=fitbit,beddit', function(data) {
 
-        var json = $.parseJSON(data);
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
         
         var series = { 
           minutesAsleep: [], 
@@ -2191,7 +2215,14 @@ var wellnessAPI =(function(wellnessAPI) {
         _chart.redraw();
       });
       _getData('api/analysis/sleepeffma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
-        var json = $.parseJSON(data);
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
+        if(typeof json.error != undefined) {
+          console.log(json.error);
+          return;
+        }
         var result = []
         for( var i = 0; i < json.length; i++ ) {
           var day = Date.parse(json[i][0]);
@@ -2203,7 +2234,14 @@ var wellnessAPI =(function(wellnessAPI) {
         _chart.redraw();
       });
       _getData('api/analysis/sleeptimema/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
-        var json = $.parseJSON(data);
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
+        if(typeof json.error != undefined) {
+          console.log(json.error);
+          return;
+        }
         var result = []
         for( var i = 0; i < json.length; i++ ) {
           var day = Date.parse(json[i][0]);
@@ -2219,7 +2257,10 @@ var wellnessAPI =(function(wellnessAPI) {
     // Activities
     if(userData.fitbit) {
       _getData('api/unify/activities/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
-        var json = $.parseJSON(data);
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
         var series = { 
           steps: [], 
           minutesSedentary: [],
@@ -2254,7 +2295,10 @@ var wellnessAPI =(function(wellnessAPI) {
     // Weight, height, blood pressure
     if(userData.withings) {
       _getData('api/unify/measures/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
-        var json = $.parseJSON(data);
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
         var series = { 
           weight: [], 
           pulse: [],
@@ -2326,6 +2370,8 @@ var wellnessAPI =(function(wellnessAPI) {
         // If the response is not yet parsed, parse it
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
+        else 
+          var json = data;
         if(json.user_info.username) {
           userData.services = json.services_linked;
           if(json.services_linked.indexOf('beddit') != -1) {
