@@ -2227,7 +2227,7 @@ var wellnessAPI =(function(wellnessAPI) {
         for( var i = 0; i < json.length; i++ ) {
           var day = Date.parse(json[i][0]);
           var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-          result.push([utcDay, isNaN(json[i][1]) == false ? Math.round(json[i][1]*100)/100 : null])
+          result.push([utcDay, json[i][1] != null ? Math.round(json[i][1]*100)/100 : null])
         }
         if(result.length > 0)
           _addAxisAndSeries('sleepeffma', 'Sleep efficiency (Av.)', result);
@@ -2246,7 +2246,7 @@ var wellnessAPI =(function(wellnessAPI) {
         for( var i = 0; i < json.length; i++ ) {
           var day = Date.parse(json[i][0]);
           var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-          result.push([utcDay, isNaN(json[i][1]) == false ? Math.round(json[i][1]*100)/100 : null])
+          result.push([utcDay, json[i][1] != null ? Math.round(json[i][1]*100)/100 : null])
         }
         if(result.length > 0)
           _addAxisAndSeries('sleeptimema', 'Sleep time (Av.)', result);
@@ -2269,6 +2269,8 @@ var wellnessAPI =(function(wellnessAPI) {
         };
         for(var i = 0; i < json.data.length; i++) {
           var current = json.data[i];
+          if(current == null) continue;
+          if(current.summary == null) continue;
           if(typeof(current.summary) == 'undefined') continue;
           var day = Date.parse(current.date);
           if(day != null) {
