@@ -2102,7 +2102,7 @@ var wellnessAPI =(function(wellnessAPI) {
     seriesVisible = typeof seriesVisible !== 'undefined' ? seriesVisible : false;
     _chart.addAxis({
       id: seriesId,
-      min: 0,
+  //    min: 0,
       showEmpty: false,
       title: {
         text: seriesName
@@ -2333,6 +2333,40 @@ var wellnessAPI =(function(wellnessAPI) {
           _addAxisAndSeries('sysPressure', 'Sys. pressure', series.sysPressure);
                 
         _chart.redraw();
+      });
+    }
+    
+    // Weather
+    if(true) {
+      _getData('weather/history/overview/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
+        if(typeof json.error == "undefined") {
+          var series = { 
+            temperature: [], 
+            pressure: [],
+            humidity: []
+          };
+          for(var i = 0; i < json.length; i++) {
+            var day = Date.parse(json[i].date.pretty);
+            if(day != null) {
+              var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+              series.temperature.push([utcDay, isNaN(parseFloat(json[i].summary[0].meantempm)) == false ? parseFloat(json[i].summary[0].meantempm) : null]);
+              series.pressure.push([utcDay, isNaN(parseFloat(json[i].summary[0].meanpressurem)) == false ? parseFloat(json[i].summary[0].meanpressurem) : null]);
+              series.humidity.push([utcDay, isNaN(parseFloat(json[i].summary[0].humidity)) == false ? parseFloat(json[i].summary[0].humidity) : null]);
+            }
+          }
+          if(series.humidity.length > 0)
+            _addAxisAndSeries('humidity', 'Humidity', series.humidity);
+          if(series.pressure.length > 0)
+            _addAxisAndSeries('pressure', 'Air Pressure', series.pressure);
+          if(series.temperature.length > 0)
+            _addAxisAndSeries('temperature', 'Air Temperature', series.temperature);
+
+          _chart.redraw();
+        }
       });
     }
 	};
