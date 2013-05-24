@@ -1551,6 +1551,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
       }
       for(var i = 0; i < analysis.latest.length; i++) {
         var ana = analysis.latest[i];
+        if(ana == null) continue;
         amplify.publish('analysis_available', {
           'id': ana.id,
           'type': capitaliseFirstLetter(ana.type),
@@ -2350,7 +2351,7 @@ var wellnessAPI =(function(wellnessAPI) {
             humidity: []
           };
           for(var i = 0; i < json.length; i++) {
-            var day = Date.parse(json[i].date.pretty);
+            var day = Date.parse(json[i].date);
             if(day != null) {
               var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
               series.temperature.push([utcDay, isNaN(parseFloat(json[i].summary[0].meantempm)) == false ? parseFloat(json[i].summary[0].meantempm) : null]);
