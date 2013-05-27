@@ -1743,7 +1743,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	var _setDate = function(dateString) {
 		_currentday = Date.parse(dateString);
 		if(_currentday == 'Invalid Date' || _currentday == null)
-			_currentday = new Date(_today.addDays(-1));
+			_currentday = _today.clone().addDays(-1);
     $('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
 		_refreshData();
@@ -1767,7 +1767,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 	var _init = function(date) {
     console.log('Initializing single day view', date, gup('date'));
     _currentday = Date.parse(gup('date'));
-    if(_currentday == null) _currentday = new Date(_today.addDays(-1));
+    if(_currentday == null) _currentday = _today.clone().addDays(-1);
     if(userData.username == 'demo') {
       _currentday = new Date(Date.parse('17.4.2013'));
     }
@@ -2015,8 +2015,16 @@ var wellnessAPI =(function(wellnessAPI) {
               click: function() {
                 $.mobile.changePage(
                   '#single-day-page?date=' + Highcharts.dateFormat('%Y-%m-%d', this.x), 
-                  {transition: 'flip'}
+                  {
+                    //data: {
+                    //  'date':Highcharts.dateFormat('%Y-%m-%d', this.x),
+                    //  'noDateChange':'false'
+                    //},
+                    transition: 'flip'
+                  }
                 );
+                
+                // wellnessAPISingleDay.setDate(Highcharts.dateFormat('%Y-%m-%d', this.x));
                 
                 //hs.htmlExpand(null, {
                 //  pageOrigin: {
