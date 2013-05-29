@@ -1560,9 +1560,10 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         var analysis = data;
       for(var i = 0; i < analysis.required_user_action.length; i++) {
         var act = analysis.required_user_action[i];
+        var baseURL = common.determineBaseURL();
         amplify.publish('analysis_possible', {
           'id': act.id,
-          'path':'http://' + window.document.location.host + act.path + '?dashboard=true',
+          'path': baseURL.substring(0,baseURL.length-1) + act.path + '?dashboard=true',
           'message':act.message,
           'type': capitaliseFirstLetter(act.type)
         });
