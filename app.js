@@ -749,7 +749,7 @@ var weatherUI = (function(weatherUI) {
 	var _init = function() {
 		amplify.subscribe('weather_history', function(data) {
 			var summary = data.history.dailysummary[0];
-			console.log('Weather data for ' + summary.date.pretty, summary);
+			console.log('Weather data for ' + summary.date, summary);
 			var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 			var weekday = weekdays[Date.parse(data.history.date.pretty).getDay()];
 			if($("#weather_variables-container").length == 0) {
@@ -1002,9 +1002,27 @@ var weatherAPI = (function(weatherAPI) {
 	}
 }());
 
-var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
-	var baseurl = 'https://wellness.cs.tut.fi/';
-  var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var common = (function(common) {
+  return {
+    determineBaseURL:function(port) {
+      if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
+        return 'https://wellness.cs.tut.fi/';
+      var result = window.document.location.protocol + "//";
+      result += window.document.location.host;
+      port = typeof port !== 'undefined' ? port : window.document.location.port;
+      if(port == "")
+        result += "/";
+      else
+        result += ":" + port + "/";
+      return result;
+    }
+  };
+}());
+
+var wellnessAPISingleDay = (function(wellnessAPISingleDay) {  
+	var baseurl = common.determineBaseURL();
+  var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];  
+  
 	var _sleepCB = function(data) {
     $('.sleep_variables').remove();
     if(typeof(data) != 'object')
@@ -1544,7 +1562,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
         var act = analysis.required_user_action[i];
         amplify.publish('analysis_possible', {
           'id': act.id,
-          'path':'http://wellness.cs.tut.fi' + act.path + '?dashboard=true',
+          'path':'http://' + window.document.location.host + act.path + '?dashboard=true',
           'message':act.message,
           'type': capitaliseFirstLetter(act.type)
         });
@@ -1969,7 +1987,7 @@ var wellnessAPISingleDay =(function(wellnessAPISingleDay) {
 }());
 
 var wellnessAPI =(function(wellnessAPI) {
-	var baseurl = 'https://wellness.cs.tut.fi/';
+	var baseurl = common.determineBaseURL();
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 	var _getData = function(apicall, cb) {
