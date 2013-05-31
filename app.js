@@ -1007,7 +1007,7 @@ var common = (function(common) {
     determineBaseURL:function(port) {
       if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
         return 'https://wellness.cs.tut.fi/';
-      var result = window.document.location.protocol + "//";
+      var result = "https://";
       result += window.document.location.host;
       port = typeof port !== 'undefined' ? port : window.document.location.port;
       if(port == "")
