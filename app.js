@@ -350,7 +350,7 @@ highchartsUI = (function(highchartsUI) {
                     radius: 6,
                     states: {
                         hover: {
-                            enabled: true,
+                            enabled: true
                         }
                     }
                 },
@@ -825,6 +825,56 @@ var twitterUI = (function(twitterUI) {
 	}
 }());
 
+var gpxUI = (function(gpxUI) {
+  var _init = function() {
+    amplify.subscribe('gpx_available', function(data) {
+      console.log('gpx_available', data);
+    });
+    if($(".gpx_events-container").length == 0) {
+      var targetDivID = tabUI.newTab('Trails');
+      var HTML = $('<div class="gpx_events-container" id="gpx_events-container"></div>');
+      $('#' + targetDivID).append(HTML);
+    }
+    var HTML = $('<div class="gpx_upload table-wrapper" id="gpx_upload">' + 
+      '<b>Upload GPX File</b></br>' +
+      '<input type="file" id="input" onchange="gpxUI.handleFiles(this.files)">' +
+      '<span id="gpx_upload_result"></span>' +
+      '</div>');
+    $("#gpx_events-container").append(HTML);
+  };
+  
+  var _handleFiles = function(files) {
+    var file = files[0];
+    var xhr = new XMLHttpRequest();
+    xhr.file = file; // not necessary if you create scopes like this
+    xhr.withCredentials = true;
+    xhr.addEventListener('progress', function(e) {
+        var done = e.position || e.loaded, total = e.totalSize || e.total;
+        console.log('xhr progress: ' + (Math.floor(done/total*1000)/10) + '%');
+    }, false);
+    if ( xhr.upload ) {
+        xhr.upload.onprogress = function(e) {
+            var done = e.position || e.loaded, total = e.totalSize || e.total;
+            console.log('xhr.upload progress: ' + done + ' / ' + total + ' = ' + (Math.floor(done/total*1000)/10) + '%');
+        };
+    }
+    xhr.onreadystatechange = function(e) {
+        if ( 4 == this.readyState ) {
+            console.log(['xhr upload complete', e]);
+        }
+    };
+    xhr.open('post', 'http://devwellness.cs.tut.fi/gpx/upload/', false);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Authorization', userData.credentials);
+    xhr.send(file);
+  }
+  return {
+    init: _init,
+    handleFiles: _handleFiles
+  }
+  
+}());
+
 var calendarUI = (function(calendarUI) {
   var _clear = function() {
     $('.calendar_events').remove();
@@ -1006,7 +1056,7 @@ var common = (function(common) {
   return {
     determineBaseURL:function(port) {
       if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
-        return 'https://wellness.cs.tut.fi/';
+        return 'http://devwellness.cs.tut.fi/';
       var result = "https://";
       result += window.document.location.host;
       port = typeof port !== 'undefined' ? port : window.document.location.port;
@@ -1043,81 +1093,85 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
     var pulse = [];
     var start; 
     var end;
-		for(var i = 0; i < json.data.length; i++) {
-      if(typeof(json.data[i].common) != 'undefined'){
+		for(var i = 0; i < json.length; i++) {
+      if(typeof(json[i].common) != 'undefined'){
         if($('#sleep_variables-container').length == 0) {
           var targetDivID = tabUI.newTab('Sleep');
           var HTML = $('<div class="sleep_variables-container" id="sleep_variables-container"></div>');
           $('#' + targetDivID).append(HTML);
         }
-        var common = json.data[i].common;
+        var common = json[i].common;
         if(common == null) continue;
         if(common.source == null) continue;
-        var daynumber = Date.parse(common.date).getDay();       
+        var daynumber = Date.parse(common.date.data).getDay();       
         // $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
         $('#sleep_variables-container').append(
           '<div class="sleep_variables table-wrapper" id="sleep_variables-' + i + '">' +
           '<table class="sleepdata_table" id="sleepdata_table_' + i + '">' +
           '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
-          '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><td></td></tr>' +
-          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString((common.minutesAsleep + common.minutesAwake) * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">&nbsp;</span></td></tr>' +
-          '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
-          '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
-          '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
-          '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount + '</td><td class="sleepdata_unit">times</td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency.data * 100) / 100 + '</td><td class="sleepdata_unit">%</td><td></td></tr>' +
+          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString((common.minutesAsleep.data + common.minutesAwake.data) * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">&nbsp;</span></td></tr>' +
+          '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep.data * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake.data * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep.data) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount.data + '</td><td class="sleepdata_unit">times</td><td class="sleepdata_sparkline"></td></tr>' +
           '</table></div>'
         );
-        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(common.minutesAsleep / 60 * 100) / 100],[Math.round(common.minutesAwake / 60 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(common.minutesAsleep.data / 60 * 100) / 100],[Math.round(common.minutesAwake.data / 60 * 100) / 100]], {'type': 'pie', 'width':'10px'});
         $.sparkline_display_visible();
       }
       
-      if(json.data[i].fitbit != null) {
-        var fitbit = json.data[i].fitbit;
-        // Push one bogus stage to the end. Parser needs to see change in stage
-        // value to make a push to the array.
-        fitbit.minuteData.push(['0000-00-00T00:00:00', 'X']);
-        var stageDur = 0;
-        var d1, d2;
-        for(j = 0; j < fitbit.minuteData.length; j++) {
-          if(j == 0) {
-            stageDur += 5;
-            d1 = Date.parse(fitbit.minuteData[j][0]);
-            continue;
+      if(json[i].fitbit != null) {
+        var fitbit = json[i].fitbit;
+        if(fitbit.minuteData.data != null) {
+          var data = fitbit.minuteData.data;
+          // Push one bogus stage to the end. Parser needs to see change in stage
+          // value to make a push to the array.
+          data.push(['0000-00-00T00:00:00', 'X']);
+          var stageDur = 0;
+          var d1, d2;
+          for(j = 0; j < data.length; j++) {
+            if(j == 0) {
+              stageDur += 5;
+              d1 = Date.parse(data[j][0]);
+              continue;
+            }
+            if( data[j][1] !=  data[j-1][1]) {
+              if( data[j-1][1] == 1) {
+                fitbit_sleep.push({
+                    from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                    to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                    label: ''
+                });
+              }
+              if( data[j-1][1] == 2) {
+                fitbit_awake.push({
+                    from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                    to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                    label: ''
+                });
+              }
+              if( data[j-1][1] == 3) {
+                fitbit_reallywake.push({
+                    from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
+                    to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
+                    label: ''
+                });
+              }
+              stageDur = 5;
+              d1 = Date.parse( data[j][0]);
+            } else {
+              stageDur += 5;
+            }
+            // Implement parseStages function that gives an array of intervals
           }
-          if( fitbit.minuteData[j][1] !=  fitbit.minuteData[j-1][1]) {
-            if( fitbit.minuteData[j-1][1] == '1') {
-              fitbit_sleep.push({
-                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                  label: ''
-              });
-            }
-            if( fitbit.minuteData[j-1][1] == '2') {
-              fitbit_awake.push({
-                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                  label: ''
-              });
-            }
-            if( fitbit.minuteData[j-1][1] == '3') {
-              fitbit_reallywake.push({
-                  from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
-                  to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
-                  label: ''
-              });
-            }
-            stageDur = 5;
-            d1 = Date.parse( fitbit.minuteData[j][0]);
-          } else {
-            stageDur += 5;
-          }
-          // Implement parseStages function that gives an array of intervals
+          console.log(fitbit_sleep, fitbit_awake, fitbit_reallywake);
         }
       }
       
-      
-      if(json.data[i].beddit != null) {
-        var beddit = json.data[i].beddit;
+      // DISABLED UNTIL BEDDIT GIVES US CHANGE TO TEST!
+      if(json[i].beddit != undefined && false) {
+        var beddit = json[i].beddit;
         if(beddit.analysis_valid == false) {
           console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), beddit);
           continue;
@@ -1240,87 +1294,18 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       var json = $.parseJSON(data);
     else 
       var json = data;
-		if(json.data[0].latest.weight != undefined) {
-      var value = Math.round(json.data[0].latest.weight.value * 10) / 10;
-      var gaugesettings = 
-        {'targetDIVid':'#gauge-container',
-         'data':{'value':value,'valueSuffix':' kg'}, 
-         'options':{
-            'id':'weight',
-            'name':'Weight','min':0,'max':value*1.4,
-        'yAxis': [{
-            'min': 0,
-            'max': value*1.4,
-            
-            'minorTickInterval': 'auto',
-            'minorTickWidth': 1,
-            'minorTickLength': 3,
-            'minorTickPosition': 'inside',
-            'minorTickColor': '#666',
-    
-            'tickPixelInterval': 30,
-            'tickWidth': 2,
-            'tickPosition': 'inside',
-            'tickLength': 4,
-            'tickColor': '#666',
-            'labels': {
-                'step': 2,
-                'rotation': 'auto',
-                'enabled': false
-            },
-            'title': {
-                'text': 'kg',
-                'margin': 0,
-                'style': { 'fontSize': '9px' }
-            },
-            'plotBands': [{    
-                            'from': 0,
-                            'to': value*1.1,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#55BF3B' // green
-                        }, {
-                            'from': value*1.1,
-                            'to': value*1.2,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#DDDF0D' // yellow
-                        }, {
-                            'from': value*1.2,
-                            'to': value*1.4,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#DF5353' // red
-                        }]
-        }],
-            'series': [{
-              'name': 'Weight',
-              'data': [value],
-              'dataLabels': {
-                'borderWidth': 0,
-                'style': { 'fontSize': '9px' }
-              },
-              'tooltip': {
-                  'valueSuffix': ' kg'
-              }
-             }]    
-	        }
-        };
-      amplify.publish('new_gauge', gaugesettings);
-		}
-		else {
-			console.log("There is no Withings weight data available", json);
-		}
-		if(json.data[0].latest.diasPressure != undefined 
-      && json.data[0].latest.sysPressure != undefined) {
-      value = Math.round(json.data[0].latest.sysPressure.value * 10) / 10;
-      var gaugesettings = 
-        {'targetDIVid':'#gauge-container',
-         'data':{'value':value,'valueSuffix':' mmHg'}, 
-         'options':{'id':'sysp','name':'DBP/SBP','min':0,'max':180,
+    try {
+      if(json[0].withings.weight != undefined) {
+        var value = Math.round(json[0].withings.weight[0].data.value * 10) / 10;
+        var gaugesettings = 
+          {'targetDIVid':'#gauge-container',
+           'data':{'value':value,'valueSuffix':' kg'}, 
+           'options':{
+              'id':'weight',
+              'name':'Weight','min':0,'max':value*1.4,
           'yAxis': [{
               'min': 0,
-              'max': 180,
+              'max': value*1.4,
               
               'minorTickInterval': 'auto',
               'minorTickWidth': 1,
@@ -1334,42 +1319,205 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               'tickLength': 4,
               'tickColor': '#666',
               'labels': {
+                  'step': 2,
+                  'rotation': 'auto',
                   'enabled': false
               },
               'title': {
-                  'text': 'mmHg',
+                  'text': 'kg',
                   'margin': 0,
                   'style': { 'fontSize': '9px' }
               },
               'plotBands': [{    
-                            'from': 0,
-                            'to': 90,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#DDDF0D' // yellow
-                        },
-                        {    
-                            'from': 90,
-                            'to': 120,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#55BF3B' // green
-                        }, {
-                            'from': 120,
-                            'to': 140,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#DDDF0D' // yellow
-                        }, {
-                            'from': 140,
-                            'to': 180,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#DF5353' // red
-                        }]
-          },{
+                              'from': 0,
+                              'to': value*1.1,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#55BF3B' // green
+                          }, {
+                              'from': value*1.1,
+                              'to': value*1.2,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#DDDF0D' // yellow
+                          }, {
+                              'from': value*1.2,
+                              'to': value*1.4,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#DF5353' // red
+                          }]
+          }],
+              'series': [{
+                'name': 'Weight',
+                'data': [value],
+                'dataLabels': {
+                  'borderWidth': 0,
+                  'style': { 'fontSize': '9px' }
+                },
+                'tooltip': {
+                    'valueSuffix': ' kg'
+                }
+               }]    
+            }
+          };
+        amplify.publish('new_gauge', gaugesettings);
+      }
+    }
+		catch(err) {
+			console.log("There is no Withings weight data available", json);
+		}
+    try {
+      if(json[0].withings.diasPressure != undefined 
+        && json[0].withings.sysPressure != undefined) {
+        value = Math.round(json[0].withings.sysPressure[0].data.value * 10) / 10;
+        var gaugesettings = 
+          {'targetDIVid':'#gauge-container',
+           'data':{'value':value,'valueSuffix':' mmHg'}, 
+           'options':{'id':'sysp','name':'DBP/SBP','min':0,'max':180,
+            'yAxis': [{
+                'min': 0,
+                'max': 180,
+                
+                'minorTickInterval': 'auto',
+                'minorTickWidth': 1,
+                'minorTickLength': 3,
+                'minorTickPosition': 'inside',
+                'minorTickColor': '#666',
+        
+                'tickPixelInterval': 30,
+                'tickWidth': 2,
+                'tickPosition': 'inside',
+                'tickLength': 4,
+                'tickColor': '#666',
+                'labels': {
+                    'enabled': false
+                },
+                'title': {
+                    'text': 'mmHg',
+                    'margin': 0,
+                    'style': { 'fontSize': '9px' }
+                },
+                'plotBands': [{    
+                              'from': 0,
+                              'to': 90,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#DDDF0D' // yellow
+                          },
+                          {    
+                              'from': 90,
+                              'to': 120,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#55BF3B' // green
+                          }, {
+                              'from': 120,
+                              'to': 140,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#DDDF0D' // yellow
+                          }, {
+                              'from': 140,
+                              'to': 180,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#DF5353' // red
+                          }]
+            },{
+                'min': 0,
+                'max': 180,
+                
+                'minorTickInterval': 'auto',
+                'minorTickWidth': 1,
+                'minorTickLength': 3,
+                'minorTickPosition': 'inside',
+                'minorTickColor': '#666',
+        
+                //'radius': '80%',
+                'offset': -7,
+        
+                'tickPixelInterval': 30,
+                'tickWidth': 2,
+                'tickPosition': 'inside',
+                'tickLength': 4,
+                'tickColor': '#666',
+                'labels': {
+                    'enabled': false
+                },
+                'plotBands': [{    
+                              'from': 0,
+                              'to': 60,
+                              'innerRadius': '80%',
+                              'outerRadius': '85%',
+                              'color': '#DDDF0D' // yellow
+                          },
+                          {    
+                              'from': 60,
+                              'to': 80,
+                              'innerRadius': '80%',
+                              'outerRadius': '85%',
+                              'color': '#55BF3B' // green
+                          }, {
+                              'from': 80,
+                              'to': 100, 
+                              'innerRadius': '80%',
+                              'outerRadius': '85%',
+                              'color': '#DDDF0D' // yellow
+                          }, {
+                              'from': 100,
+                              'to': 180,
+                              'innerRadius': '80%',
+                              'outerRadius': '85%',
+                              'color': '#DF5353' // red
+                          }]
+            }],
+              'series': [{
+                'name': 'SPB',
+                'data': [value],
+                'dial': { 'radius' : '90%', 'borderWidth': 1, 'backgroundColor': 'brown', 'borderColor': 'black' },
+                'tooltip': {
+                    'valueSuffix': 'mmHg'
+                },
+                'dataLabels': {
+                  'borderWidth': 0,
+                  'style': { 'fontSize': '9px' },
+                  'formatter' : function() {
+                      return this.series.chart.series[1].data[0].y + '/' + this.series.chart.series[0].data[0].y;
+                    }
+                }
+               },{
+                'name': 'DPB',
+                'yAxis': 1,
+                'data': [Math.round(json[0].withings.diasPressure[0].data.value * 10) / 10],
+                'dial': { 'radius' : '76%', 'borderWidth': 1, 'backgroundColor': 'blue', 'borderColor': 'black'  },
+                'tooltip': {
+                    'valueSuffix': 'mmHg'
+                },
+                'dataLabels': {
+                  'enabled': false,
+                  'formatter' : function() { return false; }
+                }
+               }]        
+            }
+          };
+        amplify.publish('new_gauge', gaugesettings);
+      }
+    }
+		catch(err) {
+			console.log("There is no Withings systolic / diastolic pressure available", json);
+		}
+
+    try {
+      if(json[0].withings.pulse != undefined) {    
+        value = Math.round(json[0].withings.pulse[0].data.value * 10) / 10;
+        var gaugesettings = 
+          {'targetDIVid':'#gauge-container',
+           'data':{'value':value,'valueSuffix':' bpm'}, 
+           'options':{'id':'pulse','name':'Pulse','min':0,'max':160, 
+                   'yAxis': [{
               'min': 0,
-              'max': 180,
+              'max': value*1.4,
               
               'minorTickInterval': 'auto',
               'minorTickWidth': 1,
@@ -1377,145 +1525,60 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               'minorTickPosition': 'inside',
               'minorTickColor': '#666',
       
-              //'radius': '80%',
-              'offset': -7,
-      
               'tickPixelInterval': 30,
               'tickWidth': 2,
               'tickPosition': 'inside',
               'tickLength': 4,
               'tickColor': '#666',
               'labels': {
+                  'step': 2,
+                  'rotation': 'auto',
                   'enabled': false
               },
+              'title': {
+                  'text': 'pbm',
+                  'margin': 0,
+                  'style': { 'fontSize': '9px' }
+              },
               'plotBands': [{    
-                            'from': 0,
-                            'to': 60,
-                            'innerRadius': '80%',
-                            'outerRadius': '85%',
-                            'color': '#DDDF0D' // yellow
-                        },
-                        {    
-                            'from': 60,
-                            'to': 80,
-                            'innerRadius': '80%',
-                            'outerRadius': '85%',
-                            'color': '#55BF3B' // green
-                        }, {
-                            'from': 80,
-                            'to': 100, 
-                            'innerRadius': '80%',
-                            'outerRadius': '85%',
-                            'color': '#DDDF0D' // yellow
-                        }, {
-                            'from': 100,
-                            'to': 180,
-                            'innerRadius': '80%',
-                            'outerRadius': '85%',
-                            'color': '#DF5353' // red
-                        }]
+                              'from': 0,
+                              'to': 160,
+                              'innerRadius': '96%',
+                              'outerRadius': '100%',
+                              'color': '#0099FF' // blue
+                          }]
           }],
-            'series': [{
-              'name': 'SPB',
-              'data': [value],
-              'dial': { 'radius' : '90%', 'borderWidth': 1, 'backgroundColor': 'brown', 'borderColor': 'black' },
-              'tooltip': {
-                  'valueSuffix': 'mmHg'
-              },
-              'dataLabels': {
-                'borderWidth': 0,
-                'style': { 'fontSize': '9px' },
-                'formatter' : function() {
-                    return this.series.chart.series[1].data[0].y + '/' + this.series.chart.series[0].data[0].y;
-                  }
-              }
-             },{
-              'name': 'DPB',
-              'yAxis': 1,
-              'data': [Math.round(json.data[0].latest.diasPressure.value * 10) / 10],
-              'dial': { 'radius' : '76%', 'borderWidth': 1, 'backgroundColor': 'blue', 'borderColor': 'black'  },
-              'tooltip': {
-                  'valueSuffix': 'mmHg'
-              },
-              'dataLabels': {
-                'enabled': false,
-                'formatter' : function() { return false; }
-              }
-             }]        
-	        }
-        };
-      amplify.publish('new_gauge', gaugesettings);
-		}
-		else {
-			console.log("There is no Withings systolic / diastolic pressure available", json);
-		}
-
-		if(json.data[0].latest.pulse != undefined) {    
-      value = Math.round(json.data[0].latest.pulse.value * 10) / 10;
-      var gaugesettings = 
-        {'targetDIVid':'#gauge-container',
-         'data':{'value':value,'valueSuffix':' bpm'}, 
-         'options':{'id':'pulse','name':'Pulse','min':0,'max':160, 
-                 'yAxis': [{
-            'min': 0,
-            'max': value*1.4,
-            
-            'minorTickInterval': 'auto',
-            'minorTickWidth': 1,
-            'minorTickLength': 3,
-            'minorTickPosition': 'inside',
-            'minorTickColor': '#666',
-    
-            'tickPixelInterval': 30,
-            'tickWidth': 2,
-            'tickPosition': 'inside',
-            'tickLength': 4,
-            'tickColor': '#666',
-            'labels': {
-                'step': 2,
-                'rotation': 'auto',
-                'enabled': false
-            },
-            'title': {
-                'text': 'pbm',
-                'margin': 0,
-                'style': { 'fontSize': '9px' }
-            },
-            'plotBands': [{    
-                            'from': 0,
-                            'to': 160,
-                            'innerRadius': '96%',
-                            'outerRadius': '100%',
-                            'color': '#0099FF' // blue
-                        }]
-        }],
-            'series': [{
-              'name': 'Pulse',
-              'data': [value],
-              'dataLabels': {
-                'borderWidth': 0,
-                'style': { 'fontSize': '9px' }
-              },
-              'tooltip': {
-                  'valueSuffix': ' bpm'
-              }
-             }]          
-	        }
-        };
-      amplify.publish('new_gauge', gaugesettings);
-		}
-		else {
+              'series': [{
+                'name': 'Pulse',
+                'data': [value],
+                'dataLabels': {
+                  'borderWidth': 0,
+                  'style': { 'fontSize': '9px' }
+                },
+                'tooltip': {
+                    'valueSuffix': ' bpm'
+                }
+               }]          
+            }
+          };
+        amplify.publish('new_gauge', gaugesettings);
+      }
+    }
+		catch(err) {
 			console.log("There is no Withings pulse available", json);
 		}
 	};
 
-	var _getData = function(apicall, cb) {
+	var _getData = function(apicall, cb, async) {
+    async = typeof async !== 'undefined' ? async : 'true';
 		var myurl = baseurl + apicall;
 		$.ajax(
 			{
 				url: myurl,
+        async: async,
 	    	type: 'GET',
 				datatype: 'json',
+        contentType: "application/json; charset=utf-8",
 	    	headers: {
 	        "Authorization": userData.credentials
    			}
@@ -1536,13 +1599,13 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 	
 	var _getWeightData = function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('api/unify/measures/' + daypath + '/days/1/', _withingsCB);
+		_getData('unify/measure/' + daypath + '/days/1/', _withingsCB);
 	};
 
 	var _getSleepData =	function() {
 		// We should get yesterdays and tomorrows data
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('api/unify/sleep/' + daypath + '/days/2/', _sleepCB);
+		_getData('unify/sleep/' + daypath + '/days/2/?inline=true', _sleepCB);
 	};
 
 	var _getFitbitSummaryData =	function() {
@@ -1616,20 +1679,20 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 
 	var _getFitbitActivityDataset =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('api/unify/activities/' + daypath + '/days/1/', function(data) {
+		_getData('unify/activity/' + daypath + '/days/1/', function(data) {
       if(typeof(data) != 'object')
         var json = $.parseJSON(data);
       else 
         var json = data;
 
-			if(json.data[0].activities != undefined) {
-				var activityDay = Date.parse(json.data[0].date);
+			if(json[0].fitbit != undefined && json[0].fitbit.activities != undefined) {
+				var activityDay = Date.parse(json[0].date);
 				var year = activityDay.getFullYear();
 				var month = activityDay.getMonth();
 				var day = activityDay.getDate();
 				var result = [];
-				for(var i = 0; i < json.data[0].activities.length; i++) {
-          var a = json.data[0].activities[i];
+				for(var i = 0; i < json[0].fitbit.activities.data.length; i++) {
+          var a = json[0].fitbit.activities.data[i];
           var hour = parseInt(a.startTime.split(':')[0]);
           var minute = parseInt(a.startTime.split(':')[1]);
           var durMS = parseInt(a.duration);
@@ -1641,7 +1704,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               label: a.name.substring(0,15) + '...'
             }
           );
-          var activityTimeStamp = json.data[0].date.split('T')[0] + 'T' + json.data[0].activities[i].startTime;
+          var activityTimeStamp = json[0].date.split('T')[0] + 'T' + json[0].fitbit.activities.data[i].startTime;
 
           //amplify.publish('new_timeline_dataset',
           //  {'name':a.name.substring(0,6) + '...',
@@ -1668,35 +1731,35 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			} else {
 				console.log("No activities data available on " + daypath, json);
 			}
-			if(json.data[0].goals != undefined && json.data[0].summary != undefined) {
+			if(json[0].fitbit.goals != undefined && json[0].fitbit.summary != undefined) {
         
-        goal = (json.data[0].goals.caloriesOut);
-        value = (json.data[0].summary.activityCalories);
+        goal = (json[0].fitbit.goals.data.caloriesOut);
+        value = (json[0].fitbit.summary.data.activityCalories);
         var burnedcaloriesdata = {"title":"Calories burned","subtitle":"","ranges":[Math.round(goal*0.44),Math.round(goal*0.75),Math.round(goal*0.95)],"measures":[value],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'burnedcalories', 'chart': burnedcaloriesdata }
         );
         var goal, value;
-        goal = (json.data[0].goals.steps);
-        value = (json.data[0].summary.steps);
+        goal = (json[0].fitbit.goals.data.steps);
+        value = (json[0].fitbit.summary.data.steps);
         var stepsdata = {"title":"Steps taken","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'steps', 'chart': stepsdata}
         );
-        goal = (json.data[0].goals.floors);
-        value = (json.data[0].summary.floors);
+        goal = (json[0].fitbit.goals.data.floors);
+        value = (json[0].fitbit.summary.data.floors);
         var floorsdata = {"title":"Floors climbed","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'floors', 'chart': floorsdata}
         );
-        goal = (json.data[0].goals.activeScore);
-        value = (json.data[0].summary.activeScore);
+        goal = (json[0].fitbit.goals.data.activeScore);
+        value = (json[0].fitbit.summary.data.activeScore);
         var activityscoredata = {"title":"Activity score","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'activityscore', 'chart': activityscoredata}
         );
         
-        var d = json.data[0].summary.distances;
+        var d = json[0].fitbit.summary.data.distances;
         var dValues = [];
         var dNames = [];
         for(var j = 0; j < d.length; j++) {
@@ -1727,7 +1790,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           }
         );
         
-        var s = json.data[0].summary;
+        var s = json[0].fitbit.summary.data;
         amplify.publish('activity_piechart', 
           { 
             'id':'activityminutes', 
@@ -1742,17 +1805,24 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			} else {
 				console.log("No activity goals / summary available on " + daypath, json);
 			}
-			if(json.data[0].steps != undefined) {
-        var mySteps = [];
-        for(var i = 1; i < json.data[0].steps.length - 1; i++) {
-          if(json.data[0].steps[i-1][1] === 0 && json.data[0].steps[i][1] === 0 && json.data[0].steps[i+1][1] === 0)
-            mySteps.push([json.data[0].steps[i][0], null]);
-          else
-            mySteps.push(json.data[0].steps[i]);
+			if(json[0].fitbit.stepsMinuteData != undefined) {
+        // Check if data is just linked
+        if(json[0].fitbit.stepsMinuteData.data == null && typeof json[0].fitbit.stepsMinuteData.link != 'undefined') {
+          // Get the linked data (omit the first slash in the URL)
+          _getData(json[0].fitbit.stepsMinuteData.link.substring(1), function(data) {
+            var mySteps = [];
+              var mySteps = [];
+              for(var i = 1; i < data.length - 1; i++) {
+                if(data[i-1][1] === 0 && data[i][1] === 0 && data[i+1][1] === 0)
+                  mySteps.push([data[i][0], null]);
+                else
+                  mySteps.push(data[i]);
+              }
+              amplify.publish('new_timeline_dataset',
+                {'name':'Steps','id':'steps','min':0,'unit':'','visible':true,'type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
+              );
+          });
         }
-				amplify.publish('new_timeline_dataset',
-          {'name':'Steps','id':'steps','min':0,'unit':'','visible':true,'type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
-        );
 			} else {
 				console.log("No detailed activity data available on " + daypath, json);
 			}
@@ -1801,6 +1871,9 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
     //  weatherAPI.getWeatherHistory(userData.address, _currentday.clone().add(1).days());
     //}
 		_getWeatherData(_currentday);
+    
+    gpxUI.init();
+    
 		if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
       _getWeatherData(_currentday.clone().add(1).days());
     }
@@ -1864,11 +1937,9 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       highchartsUI.clear();
       ganttUI.clear();
       _getAnalysisData();
+      _getSleepData();
 		}
-		if(userData.beddit) {
-     	_getSleepData();
-		}
-
+    
 		if(userData.withings) {
       // amplify.publish('gauges_to_zero');
 			_getWeightData();
@@ -1934,6 +2005,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 					url: myurl,
 		    	type: 'GET',
 					datatype: 'json',
+          contentType: "application/json; charset=utf-8",
 		    	headers: {
 		        "Authorization": credentials
     			},
@@ -1998,6 +2070,7 @@ var wellnessAPI =(function(wellnessAPI) {
 				url: myurl,
 	    	type: 'GET',
 				datatype: 'json',
+        contentType: "application/json; charset=utf-8",
 	    	headers: {
 	        "Authorization": userData.credentials
    			}
@@ -2021,7 +2094,7 @@ var wellnessAPI =(function(wellnessAPI) {
         width: $(window).width()-40
       },
       title: {
-        text: 'Wellness timeline',
+        text: 'Wellness timeline'
       },
       subtitle: {
           text: 'Click a point to see more details'
@@ -2206,7 +2279,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _populateChart = function() {		
     // Sleep
 		if(userData.fitbit || userData.beddit) {
-      _getData('api/unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/?omit_fields=fitbit,beddit', function(data) {
+      _getData('unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
 
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
@@ -2219,16 +2292,19 @@ var wellnessAPI =(function(wellnessAPI) {
           minutesToFallAsleep: [], 
           efficiency: [] 
         };
-        for(var i = 0; i < json.data.length; i++) {
-          var current = json.data[i].common;
-          if(typeof(current) == 'undefined' || current == null) continue;
-          var day = Date.parse(current.date);
-          if(day != null) {
-            var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-            series.minutesAsleep.push([utcDay, isNaN(current.minutesAsleep) == false ? current.minutesAsleep : null]);
-            series.minutesAwake.push([utcDay, isNaN(current.minutesAwake) == false ? current.minutesAwake : null]);
-            series.efficiency.push([utcDay, isNaN(current.efficiency) == false ? Math.round(current.efficiency * 100) / 100 : null]);
-            series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep) == false ? current.minutesToFallAsleep : null]);
+        for(var i = 0; i < json.length; i++) {
+          var current = json[i].common;
+          try {
+            var day = Date.parse(current.date.data);
+            if(day != null) {
+              var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+              series.minutesAsleep.push([utcDay, isNaN(current.minutesAsleep.data) == false ? current.minutesAsleep.data : null]);
+              series.minutesAwake.push([utcDay, isNaN(current.minutesAwake.data) == false ? current.minutesAwake.data : null]);
+              series.efficiency.push([utcDay, isNaN(current.efficiency.data) == false ? Math.round(current.efficiency.data * 100) / 100 : null]);
+              series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep.data) == false ? current.minutesToFallAsleep.data : null]);
+            }
+          } catch(err) {
+            // console.log(err);
           }
         }
         if(series.minutesAwake.length > 0)
@@ -2284,7 +2360,7 @@ var wellnessAPI =(function(wellnessAPI) {
     
     // Activities
     if(userData.fitbit) {
-      _getData('api/unify/activities/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('unify/activity/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2295,18 +2371,19 @@ var wellnessAPI =(function(wellnessAPI) {
           activityCalories: [],
           activeScore: []
         };
-        for(var i = 0; i < json.data.length; i++) {
-          var current = json.data[i];
-          if(current == null) continue;
-          if(current.summary == null) continue;
-          if(typeof(current.summary) == 'undefined') continue;
-          var day = Date.parse(current.date);
-          if(day != null) {
-            var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-            series.steps.push([utcDay, isNaN(current.summary.steps) == false ? current.summary.steps : null]);
-            series.minutesSedentary.push([utcDay, isNaN(current.summary.sedentaryMinutes) == false ? current.summary.sedentaryMinutes : null]);
-            series.activityCalories.push([utcDay, isNaN(current.summary.activityCalories) == false ? current.summary.activityCalories : null]);
-            series.activeScore.push([utcDay, isNaN(current.summary.activeScore) == false ? current.summary.activeScore : null]);
+        for(var i = 0; i < json.length; i++) {
+          var current = json[i];
+          try {
+            var day = Date.parse(current.date);
+            if(day != null) {
+              var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+              series.steps.push([utcDay, isNaN(current.fitbit.summary.data.steps) == false ? current.fitbit.summary.data.steps : null]);
+              series.minutesSedentary.push([utcDay, isNaN(current.fitbit.summary.data.sedentaryMinutes) == false ? current.fitbit.summary.data.sedentaryMinutes : null]);
+              series.activityCalories.push([utcDay, isNaN(current.fitbit.summary.data.activityCalories) == false ? current.fitbit.summary.data.activityCalories : null]);
+              series.activeScore.push([utcDay, isNaN(current.fitbit.summary.data.activeScore) == false ? current.fitbit.summary.data.activeScore : null]);
+            }
+          } catch(err) {
+            // console.log(err)
           }
         }
         if(series.steps.length > 0)
@@ -2324,7 +2401,7 @@ var wellnessAPI =(function(wellnessAPI) {
     
     // Weight, height, blood pressure
     if(userData.withings) {
-      _getData('api/unify/measures/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('unify/measure/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2335,20 +2412,20 @@ var wellnessAPI =(function(wellnessAPI) {
           diasPressure: [],
           sysPressure: []
         };
-        for(var i = 0; i < json.data.length; i++) {
-          var current = json.data[i];
-          if(typeof(current.latest) == 'undefined') continue;
-          if(typeof(current.latest.weight) == 'undefined') continue;
-          if(typeof(current.latest.pulse) == 'undefined') continue;
-          if(typeof(current.latest.diasPressure) == 'undefined') continue;
-          if(typeof(current.latest.sysPressure) == 'undefined') continue;
-          var day = Date.parse(current.date);
-          if(day != null) {
-            var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-            series.weight.push([utcDay, isNaN(current.latest.weight.value) == false ? Math.round(current.latest.weight.value * 100) / 100 : null]);
-            series.pulse.push([utcDay, isNaN(current.latest.pulse.value) == false ? current.latest.pulse.value : null]);
-            series.diasPressure.push([utcDay, isNaN(current.latest.diasPressure.value) == false ? current.latest.diasPressure.value : null]);
-            series.sysPressure.push([utcDay, isNaN(current.latest.sysPressure.value) == false ? current.latest.sysPressure.value : null]);
+        for(var i = 0; i < json.length; i++) {
+          try {
+            var current = json[i];
+            var day = Date.parse(current.date);
+            // TODO, we should loop the weight / pulse / pressure measurements as well
+            if(day != null) {
+              var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+              series.weight.push([utcDay, isNaN(current.withings.weight[0].data.value) == false ? Math.round(current.withings.weight[0].data.value * 100) / 100 : null]);
+              series.pulse.push([utcDay, isNaN(current.withings.pulse[0].data.value) == false ? current.withings.pulse[0].data.value : null]);
+              series.diasPressure.push([utcDay, isNaN(current.withings.diasPressure[0].data.value) == false ? current.withings.diasPressure[0].data.value : null]);
+              series.sysPressure.push([utcDay, isNaN(current.withings.sysPressure[0].data.value) == false ? current.withings.sysPressure[0].data.value : null]);
+            }
+          } catch(err) {
+            // console.log(err);
           }
         }
         if(series.weight.length > 0)
@@ -2406,7 +2483,7 @@ var wellnessAPI =(function(wellnessAPI) {
     $( "#login-btn" ).button( "disable" );
   };
 
-  _getUserData = function(username, password) {
+  var _getUserData = function(username, password) {
     // Create authorization header for queries
     var credentials = 'Basic ' + Base64.encode(username + ":" + password);
     
@@ -2414,14 +2491,46 @@ var wellnessAPI =(function(wellnessAPI) {
     // If the call is successfull we consider credentials to be ok
     var apicall = 'user/services/';
     var myurl = baseurl + apicall;
+    
+    // Trying to use IE to make the call but no avail
+    if ('XDomainRequest' in window && window.XDomainRequest !== null) {
+     
+      // override default jQuery transport
+      //jQuery.ajaxSettings.xhr = function() {
+      //    try { return new XDomainRequest(); }
+      //    catch(e) { }
+      //};
+      
+      IE8_ajax_fix();
+     
+      // also, override the support check
+      jQuery.support.cors = true;
+
+
+      if (Function.prototype.bind && window.console && typeof console.log == "object"){
+          [
+            "log","info","warn","error","assert","dir","clear","profile","profileEnd"
+          ].forEach(function (method) {
+              console[method] = this.bind(console[method], console);
+          }, Function.prototype.call);
+      }
+    }
+    
     $.ajax(
       {
         url: myurl,
         type: 'GET',
-        datatype: 'json',
-        headers: {
-          "Authorization": credentials
+        context: this,
+        dataType: 'json',
+        crossdomain: true,
+        contentType: "application/json; charset=utf-8",
+        beforeSend: function(jqXHR, settings) {
+          jqXHR.withCredentials = true;
+          jqXHR.setRequestHeader('Authorization', credentials);
         },
+        //headers: {
+        //  "Authorization": credentials
+        //},
         statusCode: {
           401: function() {
             alert("Login failed");
@@ -2445,8 +2554,8 @@ var wellnessAPI =(function(wellnessAPI) {
           } if(json.services_linked.indexOf('fitbit') != -1) {
             userData.fitbit = true;
           } if(json.services_linked.indexOf('twitter') != -1) {
-	            userData.twitter = true;
-					}
+              userData.twitter = true;
+          }
           $("#servicestext").text(" (" + userData.services.toString() + ") ");
           userData.calendars = json.calendars;
           userData.username = username;
@@ -2465,7 +2574,14 @@ var wellnessAPI =(function(wellnessAPI) {
           $("#login-msg").text("Sorry, login failed!");
         }
       }
-    );
+    ).error(function(jqXHR, textStatus, errorThrown) { 
+      alert("Error: " + errorThrown); 
+      console.log(jqXHR, textStatus, errorThrown);
+      if ('XDomainRequest' in window && window.XDomainRequest !== null) {
+        alert("       Seems that you are using IE which \ndoes not support HTTP Basic Authorization. \n\n Please, install a proper browser and try again.");
+      }
+    });
+    
   };
 
 	return {
@@ -2807,4 +2923,92 @@ function processTweetLinks(text) {
     exp = /(^|\s)@(\w+)/g;
     text = text.replace(exp, "$1<a href='http://www.twitter.com/$2' target='_blank'>@$2</a>");
     return text;
+}
+
+// jQuery.XDomainRequest.js
+// Author: Jason Moon - @JSONMOON
+// IE8+
+//if (!jQuery.support.cors && window.XDomainRequest) {
+function IE8_ajax_fix() {
+	var httpRegEx = /^https?:\/\//i;
+	var getOrPostRegEx = /^get|post$/i;
+	var sameSchemeRegEx = new RegExp('^'+location.protocol, 'i');
+	var xmlRegEx = /\/xml/i;
+
+	// ajaxTransport exists in jQuery 1.5+
+	jQuery.ajaxTransport('text html xml json', function(options, userOptions, jqXHR){
+		// XDomainRequests must be: asynchronous, GET or POST methods, HTTP or HTTPS protocol, and same scheme as calling page
+		if (options.crossDomain && options.async && getOrPostRegEx.test(options.type) && httpRegEx.test(userOptions.url) && sameSchemeRegEx.test(userOptions.url)) {
+			var xdr = null;
+			var userType = (userOptions.dataType||'').toLowerCase();
+			return {
+				send: function(headers, complete){
+					xdr = new XDomainRequest();
+					if (/^\d+$/.test(userOptions.timeout)) {
+						xdr.timeout = userOptions.timeout;
+					}
+					xdr.ontimeout = function(){
+						complete(500, 'timeout');
+					};
+					xdr.onload = function(){
+						var allResponseHeaders = 'Content-Length: ' + xdr.responseText.length + '\r\nContent-Type: ' + xdr.contentType;
+						var status = {
+							code: 200,
+							message: 'success'
+						};
+						var responses = {
+							text: xdr.responseText
+						};
+						/*
+						if (userType === 'html') {
+							responses.html = xdr.responseText;
+						} else
+						*/
+						try {
+							if (userType === 'json') {
+								try {
+									responses.json = JSON.parse(xdr.responseText);
+								} catch(e) {
+									status.code = 500;
+									status.message = 'parse error';
+									//throw 'Invalid JSON: ' + xdr.responseText;
+								}
+							} else if ((userType === 'xml') || ((userType !== 'text') && xmlRegEx.test(xdr.contentType))) {
+								var doc = new ActiveXObject('Microsoft.XMLDOM');
+								doc.async = false;
+								try {
+									doc.loadXML(xdr.responseText);
+								} catch(e) {
+									doc = undefined;
+								}
+								if (!doc || !doc.documentElement || doc.getElementsByTagName('parsererror').length) {
+									status.code = 500;
+									status.message = 'parse error';
+									throw 'Invalid XML: ' + xdr.responseText;
+								}
+								responses.xml = doc;
+							}
+						} catch(parseMessage) {
+							throw parseMessage;
+						} finally {
+							complete(status.code, status.message, responses, allResponseHeaders);
+						}
+					};
+					xdr.onerror = function(){
+						complete(500, 'XDR Error', {
+							text: xdr.responseText
+						});
+					};
+					xdr.open(options.type, options.url);
+					//xdr.send(userOptions.data);
+					xdr.send();
+				},
+				abort: function(){
+					if (xdr) {
+						xdr.abort();
+					}
+				}
+			};
+		}
+	});
 }

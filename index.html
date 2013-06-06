@@ -9,24 +9,24 @@
 		<link rel="stylesheet" href="./lib/bootstrap/css/bootstrap.css" />
 		<link rel="stylesheet" type="text/css" href="style.css">		
 		
-		<script src="./lib/jquery-1.8.2.min.js"></script>
-		<script src="./lib/jqm/jquery.mobile-1.2.0.min.js"></script>
+		<script src="./lib/jquery-1.8.2.min.js" type="text/javascript"></script>
+		<script src="./lib/jqm/jquery.mobile-1.2.0.min.js" type="text/javascript"></script>
 		
-    <script src="./lib/jquery.sparkline.js"></script>
+    <script src="./lib/jquery.sparkline.js" type="text/javascript"></script>
     
-		<script src="./lib/bootstrap/js/bootstrap.js"></script>
+		<script src="./lib/bootstrap/js/bootstrap.js" type="text/javascript"></script>
 		
-		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" ></script>
+		<script src="./lib/mobiscroll/js/mobiscroll.custom-2.4.5.min.js" type="text/javascript"></script>
 
-    <script src="./lib/highcharts/js/highcharts.js"></script>
-    <script src="./lib/highcharts/js/highcharts-more.js"></script>
+    <script src="./lib/highcharts/js/highcharts.js" type="text/javascript"></script>
+    <script src="./lib/highcharts/js/highcharts-more.js" type="text/javascript"></script>
     
     <!-- Additional files for the Highslide popup effect -->
     <!-- <script type="text/javascript" src="http://www.highcharts.com/highslide/highslide-full.min.js"></script> -->
     <!-- <script type="text/javascript" src="http://www.highcharts.com/highslide/highslide.config.js" charset="utf-8"></script> -->
     <!-- <link rel="stylesheet" type="text/css" href="http://www.highcharts.com/highslide/highslide.css" /> -->
 
-		<script src="./lib/amplify-1.1.0/amplify.js" ></script>
+		<script type="text/javascript" src="./lib/amplify-1.1.0/amplify.js" ></script>
 		<script type="text/javascript" src="./lib/date.js"></script>
 		<script type="text/javascript" src="./app.js"></script>
 	</head>
@@ -116,8 +116,9 @@
     <!-- Longer timeline -->
 		<div data-role="page" id="multiple-day-page"> 
 			<div data-role="header">
+				<a rel='close' data-role='button' href='#single-day-page?noDateChange=true' data-transition="flip" class="ui-btn-left">Daily view</a>
 				<h1><span class="headertext">WellMU Dashboard</span></h1>
-				<a rel='close' data-role='button' href='#single-day-page?noDateChange=true' data-transition="flip" class="ui-btn-right" data-icon="arrow-r">Daily view</a>
+        <a href="#" data-role='button' data-icon="gear" class="ui-btn-right" data-rel="dialog" onClick="wellnessAPI.register('https://wellness.cs.tut.fi/');">Setup</a>
 			</div>
 			<div data-role="content">
 			
@@ -160,8 +161,9 @@
     <!-- Detailed one day view -->
     <div data-role="page" id="single-day-page"> 
       <div data-role="header">
-        <a rel='close' data-role='button' data-transition="flip" href='#multiple-day-page' data-icon="arrow-l">Overview</a>
+        <a rel='close' data-role='button' data-transition="flip" href='#multiple-day-page'>Overview</a>
 				<h1><span class="headertext">WellMU Dashboard</span></h1>
+        <a href="#" data-role='button' data-icon="gear" class="ui-btn-right" data-rel="dialog" onClick="wellnessAPI.register('https://wellness.cs.tut.fi/');">Setup</a>
 			</div>
 			<div data-role="content">
 				<div style="text-align: center; display:block; width:auto;" id="dateselect" class="show-after-init">
