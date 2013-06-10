@@ -7,6 +7,7 @@ var userData = (function(userData) {
 	var _beddit = false;
 	var _withings = false;
 	var _fitbit = false;
+  var _fitbitGoals = undefined;
 	var _twitter = false;
 	var _nightstart = null;
 	var _nightend = null;
@@ -19,6 +20,7 @@ var userData = (function(userData) {
 		beddit: _beddit,
 		withings: _withings,
 		fitbit: _fitbit,
+		fitbitGoals: _fitbitGoals,
 		twitter: _twitter
 	}
 }());
@@ -863,7 +865,7 @@ var gpxUI = (function(gpxUI) {
             console.log(['xhr upload complete', e]);
         }
     };
-    xhr.open('post', 'http://devwellness.cs.tut.fi/gpx/upload/', false);
+    xhr.open('post', 'https://devwellness.cs.tut.fi/gpx/upload/', false);
     xhr.withCredentials = true;
     xhr.setRequestHeader('Authorization', userData.credentials);
     xhr.send(file);
@@ -1056,7 +1058,7 @@ var common = (function(common) {
   return {
     determineBaseURL:function(port) {
       if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
-        return 'http://devwellness.cs.tut.fi/';
+        return 'https://devwellness.cs.tut.fi/';
       var result = "https://";
       result += window.document.location.host;
       port = typeof port !== 'undefined' ? port : window.document.location.port;
@@ -1169,51 +1171,51 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         }
       }
       
-      // DISABLED UNTIL BEDDIT GIVES US CHANGE TO TEST!
-      if(json[i].beddit != undefined && false) {
+      if(json[i].beddit != undefined) {
         var beddit = json[i].beddit;
         if(beddit.analysis_valid == false) {
           console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), beddit);
           continue;
         } else {
-          console.log('Valid Beddit analysis available on ' + beddit.date, beddit);
+          console.log('Valid Beddit analysis available on ' + beddit.date.data, beddit);
 
         }
         // Push one bogus stage to the end. Parser needs to see change in stage
         // value to make a push to the array.
-        beddit.sleep_stages.push(['0000-00-00T00:00:00', 'X']);
+        var data = beddit.sleep_stages.data;
+        data.push(['0000-00-00T00:00:00', 'X']);
         var j = 0;
         var stageDur = 0;
         var d1, d2;
-        for(j = 0; j < beddit.sleep_stages.length; j++) {
+        for(j = 0; j < data.length; j++) {
           if(j == 0) {
             stageDur += 5;
-            d1 = Date.parse(beddit.sleep_stages[j][0]);
+            d1 = Date.parse(data[j][0]);
             continue;
           }
-          if(beddit.sleep_stages[j][1] != beddit.sleep_stages[j-1][1]) {
-            if(beddit.sleep_stages[j-1][1] == 'D') {
+          if(data[j][1] != data[j-1][1]) {
+            if(data[j-1][1] == 'D') {
               deep.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
                   label: ''
               });
             }
-            if(beddit.sleep_stages[j-1][1] == 'R') {
+            if(data[j-1][1] == 'R') {
               rem.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
                   label: ''
               });
             }
-            if(beddit.sleep_stages[j-1][1] == 'L') {
+            if(data[j-1][1] == 'L') {
               light.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
                   label: ''
               });
             }
-            if(beddit.sleep_stages[j-1][1] == 'W') {
+            if(data[j-1][1] == 'W') {
               wake.push({
                   from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()),
                   to: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes() + stageDur),
@@ -1221,21 +1223,21 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               });
             }
             stageDur = 5;
-            d1 = Date.parse(beddit.sleep_stages[j][0]);
+            d1 = Date.parse(data[j][0]);
           } else {
             stageDur += 5;
           }
           // Implement parseStages function that gives an array of intervals
         } 						
         $('#sleepdata_table_' + i).append(
-          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
-          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep.data) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep.data) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
 //          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(beddit.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">&nbsp;</span></td></tr>' +
-          '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(beddit.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
-          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">&nbsp;</span></td>--></tr>'
+          '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(beddit.resting_heartrate.data*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
+          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent.data + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">&nbsp;</span></td>--></tr>'
         );
       
-        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(beddit.time_sleeping/3600 * 100) / 100],[Math.round(beddit.time_deep_sleep/3600 * 100) / 100],[ Math.round(beddit.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(beddit.time_sleeping.data/3600 * 100) / 100],[Math.round(beddit.time_deep_sleep.data/3600 * 100) / 100],[ Math.round(beddit.time_light_sleep.data/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
 //        $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(beddit.time_in_bed/3600 * 100) / 100, Math.round((beddit.time_in_bed-beddit.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
         
         if(noise.length > 0) {
@@ -1251,10 +1253,10 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             pulse.push(null);
           }
         }
-        noise = noise.concat(beddit.noise_measurements);
-        luminosity = luminosity.concat(beddit.luminosity_measurements);
-        actigram = actigram.concat(beddit.minutely_actigram);
-        pulse = pulse.concat(beddit.averaged_heart_rate_curve);
+        noise = noise.concat(beddit.noise_measurements.data);
+        luminosity = luminosity.concat(beddit.luminosity_measurements.data);
+        actigram = actigram.concat(beddit.minutely_actigram.data);
+        pulse = pulse.concat(beddit.averaged_heart_rate_curve.data);
       }
 		}
 		
@@ -1569,7 +1571,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		}
 	};
 
-	var _getData = function(apicall, cb, async) {
+	var _getData = function(apicall, done_cb, async) {
     async = typeof async !== 'undefined' ? async : 'true';
 		var myurl = baseurl + apicall;
 		$.ajax(
@@ -1581,9 +1583,14 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         contentType: "application/json; charset=utf-8",
 	    	headers: {
 	        "Authorization": userData.credentials
-   			}
+   			},
+        statusCode: {
+          404: function() {
+            console.log("404" + myurl);
+          }
+				}
 			}
-		).done(cb);
+		).done(done_cb);
 	};
 
 	var _getWeatherData =	function(date) {
@@ -1633,6 +1640,106 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       }
       for(var i = 0; i < analysis.latest.length; i++) {
         var ana = analysis.latest[i];
+        if(ana == null) continue;
+        amplify.publish('analysis_available', {
+          'id': ana.id,
+          'type': capitaliseFirstLetter(ana.type),
+          'name': capitaliseFirstLetter(ana.name),
+          'value': ana.value,
+          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+        });
+      }
+		});
+		_getData('api/analysis/sleepeffma/' + daypath + '/days/1/7/', function(data) {
+      if(typeof(data) != 'object')
+        var analysis = $.parseJSON(data);
+      else 
+        var analysis = data;
+      if(typeof analysis.error != 'undefined') {
+        console.log('api/analysis/sleepeffma/ ' + analysis.error)
+      }
+      for(var i = 0; i < analysis.length; i++) {
+        var ana = {
+          id: 'sleepeffma',
+          type: 'sleep',
+          value: analysis[i][1],
+          date: analysis[i][0]
+        };
+        if(ana == null) continue;
+        amplify.publish('analysis_available', {
+          'id': ana.id,
+          'type': capitaliseFirstLetter(ana.type),
+          'name': capitaliseFirstLetter(ana.name),
+          'value': ana.value,
+          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+        });
+      }
+		});
+		_getData('api/analysis/sleeptimema/' + daypath + '/days/1/7/', function(data) {
+      if(typeof(data) != 'object')
+        var analysis = $.parseJSON(data);
+      else 
+        var analysis = data;
+      if(typeof analysis.error != 'undefined') {
+        console.log('api/analysis/sleeptimema/ ' + analysis.error)
+      }
+      for(var i = 0; i < analysis.length; i++) {
+        var ana = {
+          id: 'sleeptimema',
+          type: 'sleep',
+          value: analysis[i][1],
+          date: analysis[i][0]
+        };
+        if(ana == null) continue;
+        amplify.publish('analysis_available', {
+          'id': ana.id,
+          'type': capitaliseFirstLetter(ana.type),
+          'name': capitaliseFirstLetter(ana.name),
+          'value': ana.value,
+          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+        });
+      }
+		});
+		_getData('api/analysis/sleepwakeningsma/' + daypath + '/days/1/7/', function(data) {
+      if(typeof(data) != 'object')
+        var analysis = $.parseJSON(data);
+      else 
+        var analysis = data;
+      if(typeof analysis.error != 'undefined') {
+        console.log('api/analysis/sleepwakeningsma/ ' + analysis.error)
+      }
+      for(var i = 0; i < analysis.length; i++) {
+        var ana = {
+          id: 'sleepwakeningsma',
+          type: 'sleep',
+          value: analysis[i][1],
+          date: analysis[i][0]
+        };
+        if(ana == null) continue;
+        amplify.publish('analysis_available', {
+          'id': ana.id,
+          'type': capitaliseFirstLetter(ana.type),
+          'name': capitaliseFirstLetter(ana.name),
+          'value': ana.value,
+          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+        });
+      }
+		});
+		_getData('api/analysis/sleepfallsleepma/' + daypath + '/days/1/7/', function(data) {
+      if(typeof(data) != 'object')
+        var analysis = $.parseJSON(data);
+      else 
+        var analysis = data;
+      if(typeof analysis.error != 'undefined') {
+        console.log('api/analysis/sleepfallsleepma/ ' + analysis.error)
+      }
+      for(var i = 0; i < analysis.length; i++) {
+        var ana = {
+          id: 'sleepfallsleepma',
+          type: 'sleep',
+          value: analysis[i][1],
+          date: analysis[i][0]
+        };
         if(ana == null) continue;
         amplify.publish('analysis_available', {
           'id': ana.id,
@@ -1705,16 +1812,6 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             }
           );
           var activityTimeStamp = json[0].date.split('T')[0] + 'T' + json[0].fitbit.activities.data[i].startTime;
-
-          //amplify.publish('new_timeline_dataset',
-          //  {'name':a.name.substring(0,6) + '...',
-          //  'type':'line','lineWidth':0,
-          //  'pointInterval': json.data[0].activities[i].duration, 
-          //  'pointStart': Date.parse(activityTimeStamp),
-          //  'data':[activityTimeStamp, 0],
-          //  'text':a.name}
-          //); 
-
         }
         if(result.length > 0) {
           var data = {
@@ -1731,28 +1828,53 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			} else {
 				console.log("No activities data available on " + daypath, json);
 			}
-			if(json[0].fitbit.goals != undefined && json[0].fitbit.summary != undefined) {
-        
-        goal = (json[0].fitbit.goals.data.caloriesOut);
+      
+      // We do not necessarily have goals for old data
+      var goals = undefined
+      if(typeof json[0].fitbit != 'undefined') {
+        goals = json[0].fitbit.goals;
+      }
+      
+      // If goals is found, we store it and use it.
+      if(typeof goals != 'undefined') {
+        userData.fitbitGoals = goals;
+      }
+      // If goals is not available, we use old goals data if available
+      else if ( typeof userData.fitbitGoals != 'undefined' ) {
+        goals = userData.fitbitGoals;
+      }
+      // If everything fails, we use fake goals data
+      else {
+        goals = {
+          data : {
+            caloriesOut: 2500,
+            steps: 10000,
+            floors: 10,
+            activeScore: 1000
+          }
+        }
+      }
+			if(typeof json[0].fitbit != 'undefined' && typeof json[0].fitbit.summary != 'undefined') {
+        goal = (goals.data.caloriesOut);
         value = (json[0].fitbit.summary.data.activityCalories);
         var burnedcaloriesdata = {"title":"Calories burned","subtitle":"","ranges":[Math.round(goal*0.44),Math.round(goal*0.75),Math.round(goal*0.95)],"measures":[value],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'burnedcalories', 'chart': burnedcaloriesdata }
         );
         var goal, value;
-        goal = (json[0].fitbit.goals.data.steps);
+        goal = (goals.data.steps);
         value = (json[0].fitbit.summary.data.steps);
         var stepsdata = {"title":"Steps taken","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'steps', 'chart': stepsdata}
         );
-        goal = (json[0].fitbit.goals.data.floors);
+        goal = (goals.data.floors);
         value = (json[0].fitbit.summary.data.floors);
         var floorsdata = {"title":"Floors climbed","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'floors', 'chart': floorsdata}
         );
-        goal = (json[0].fitbit.goals.data.activeScore);
+        goal = (goals.data.activeScore);
         value = (json[0].fitbit.summary.data.activeScore);
         var activityscoredata = {"title":"Activity score","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
@@ -1805,7 +1927,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			} else {
 				console.log("No activity goals / summary available on " + daypath, json);
 			}
-			if(json[0].fitbit.stepsMinuteData != undefined) {
+			if(typeof json[0].fitbit != 'undefined' && typeof json[0].fitbit.stepsMinuteData != 'undefined') {
         // Check if data is just linked
         if(json[0].fitbit.stepsMinuteData.data == null && typeof json[0].fitbit.stepsMinuteData.link != 'undefined') {
           // Get the linked data (omit the first slash in the URL)
@@ -1941,7 +2063,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		}
     
 		if(userData.withings) {
-      // amplify.publish('gauges_to_zero');
+      amplify.publish('gauges_to_zero');
 			_getWeightData();
 		}
 
@@ -2241,11 +2363,15 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _period = 7;
 	
 	// Initialize the application based on available services
-	var _init = function() {
-    if(userData.username != 'demo') {
-      _currentday = new Date(_today.clone().add({days: (_period * -1)}));
+	var _init = function(startDate) {
+    if(typeof startDate != 'object' || startDate == null) {
+      if(userData.username != 'demo') {
+        _currentday = new Date(_today.clone().add({days: (_period * -1)}));
+      } else {
+        _currentday = new Date(Date.parse('15.4.2013'));
+      }
     } else {
-      _currentday = new Date(Date.parse('15.4.2013'));
+      _currentday = startDate;
     }
 		
 		// Create something to draw on
@@ -2262,7 +2388,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _setPeriod = function(newPeriod) {
     _period = newPeriod;
     _destroyChart();
-    _init();
+    _init(Date.parse($('#datescroller-periodstart').mobiscroll('getDate')));
 	}
 	
 	var _destroyChart = function() {
@@ -2354,6 +2480,44 @@ var wellnessAPI =(function(wellnessAPI) {
         }
         if(result.length > 0)
           _addAxisAndSeries('sleeptimema', 'Sleep time (Av.)', result);
+        _chart.redraw();
+      });
+      _getData('api/analysis/sleepwakeningsma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
+        if(typeof json.error != "undefined") {
+          console.log(json.error);
+          return;
+        }
+        var result = []
+        for( var i = 0; i < json.length; i++ ) {
+          var day = Date.parse(json[i][0]);
+          var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+          result.push([utcDay, json[i][1] != null ? Math.round(json[i][1]*100)/100 : null])
+        }
+        if(result.length > 0)
+          _addAxisAndSeries('sleepwakeningsma', 'Awakenings (Av.)', result);
+        _chart.redraw();
+      });
+      _getData('api/analysis/sleepfallsleepma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
+        if(typeof json.error != "undefined") {
+          console.log(json.error);
+          return;
+        }
+        var result = []
+        for( var i = 0; i < json.length; i++ ) {
+          var day = Date.parse(json[i][0]);
+          var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+          result.push([utcDay, json[i][1] != null ? Math.round(json[i][1]*100)/100 : null])
+        }
+        if(result.length > 0)
+          _addAxisAndSeries('sleepfallsleepma', 'Fall Asleep (Av.)', result);
         _chart.redraw();
       });
     }
@@ -2456,7 +2620,7 @@ var wellnessAPI =(function(wellnessAPI) {
           };
           for(var i = 0; i < json.length; i++) {
             var day = Date.parse(json[i].date);
-            if(day != null) {
+            if(day != null && typeof json[i].summary != 'undefined') {
               var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
               series.temperature.push([utcDay, isNaN(parseFloat(json[i].summary[0].meantempm)) == false ? parseFloat(json[i].summary[0].meantempm) : null]);
               series.pressure.push([utcDay, isNaN(parseFloat(json[i].summary[0].meanpressurem)) == false ? parseFloat(json[i].summary[0].meanpressurem) : null]);
@@ -2588,6 +2752,9 @@ var wellnessAPI =(function(wellnessAPI) {
 		init: _init,
 		period: _period,
 		setPeriod: _setPeriod,
+    getPeriod: function() {
+      return _period;
+    },
 		hideOtherSeries: _hideOtherSeries,
 		register: function(path, cb) {
       runtimePopup(path, cb);

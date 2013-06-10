@@ -58,6 +58,24 @@
 						return instance;
 					}
 				});
+				$('#datescroller-periodstart').mobiscroll().date({
+					theme: 'jqm',
+					display: 'bubble',
+					mode: 'mixed',
+					animate: 'fade',
+					dateOrder: 'mmD ddyy',
+					maxDate: today,
+					onSelect: function(dateText, instance) { 
+            var startDate = Date.parse($('#datescroller-periodstart').mobiscroll('getDate'));
+            if(startDate == null) {
+              startDate = Date.today().add({days: (wellnessAPI.getPeriod() * -1)});
+            }
+						wellnessAPI.init(startDate);
+						event.stopPropagation();
+						return instance;
+					}
+				});
+        $('#datescroller-periodstart').mobiscroll('setDate', Date.today().add({days: (wellnessAPI.getPeriod() * -1)}), true);
 				$('#single-day-page').on('pageshow',function(event, ui){
           if(gup('noDateChange') != 'true') {
             var date = gup('date');
@@ -122,24 +140,19 @@
 			</div>
 			<div data-role="content">
 			
-        <div class="ui-grid-a">
+        <div class="ui-grid-b">
           <div class="ui-block-a">
-            <div data-role="fieldcontain" id="variable-select-choices" class="show-after-init">
+            <div data-role="fieldcontain" class="show-after-init">
               <fieldset data-role="controlgroup" data-type="horizontal" data-role="fieldcontain" data-mini="true">
-                <legend>Select variables to show:</legend>
-                <select name="select-choice-1" id="select-choice-1" class="select-choice">
-                  <option value="" selected>- Select -</option>
-                </select>
-                <select name="select-choice-2" id="select-choice-2" class="select-choice">
-                  <option value="" selected>- Select -</option>
-                </select>
+                <legend>Period start date:</legend>
+        				<div style="width: 8em;display: inline-block;"><input name="datescroller-periodstart" data-mini="true" data-inline="true" id="datescroller-periodstart" class="i-txt" data-theme="b" /></div>
               </fieldset>
             </div>
           </div>
           <div class="ui-block-b">
             <div data-role="fieldcontain" class="show-after-init">
               <fieldset data-role="controlgroup" data-type="horizontal" data-role="fieldcontain" data-mini="true">
-                <legend>Time period length (days):</legend>
+                <legend>Period length:</legend>
                 <input type="radio" name="radio-choice" id="radio-choice-7" value="7" checked="checked" />
                 <label for="radio-choice-7">7</label>
                 <input type="radio" name="radio-choice" id="radio-choice-30" value="30" />
@@ -149,9 +162,22 @@
                 <input type="radio" name="radio-choice" id="radio-choice-180" value="180" />
                 <label for="radio-choice-180">180</label>
               </fieldset>
-            </div>   
+            </div>
           </div>
-        </div><!-- /grid-a -->
+          <div class="ui-block-c">
+            <div data-role="fieldcontain" id="variable-select-choices" class="show-after-init">
+              <fieldset data-role="controlgroup" data-type="horizontal" data-role="fieldcontain" data-mini="true">
+                <legend>Variables to show:</legend>
+                <select name="select-choice-1" id="select-choice-1" class="select-choice">
+                  <option value="" selected>- Select -</option>
+                </select>
+                <select name="select-choice-2" id="select-choice-2" class="select-choice">
+                  <option value="" selected>- Select -</option>
+                </select>
+              </fieldset>
+            </div>  
+          </div>
+        </div><!-- /grid-b -->
 
         <div id="highcharts" class="show-after-init"></div>
       
