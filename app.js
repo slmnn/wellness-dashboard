@@ -1661,6 +1661,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       for(var i = 0; i < analysis.length; i++) {
         var ana = {
           id: 'sleepeffma',
+          name: 'sleepeffma',
           type: 'sleep',
           value: analysis[i][1],
           date: analysis[i][0]
@@ -1686,6 +1687,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       for(var i = 0; i < analysis.length; i++) {
         var ana = {
           id: 'sleeptimema',
+          name: 'sleeptimema',
           type: 'sleep',
           value: analysis[i][1],
           date: analysis[i][0]
@@ -1711,6 +1713,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       for(var i = 0; i < analysis.length; i++) {
         var ana = {
           id: 'sleepwakeningsma',
+          name: 'sleepwakeningsma',
           type: 'sleep',
           value: analysis[i][1],
           date: analysis[i][0]
@@ -1736,6 +1739,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       for(var i = 0; i < analysis.length; i++) {
         var ana = {
           id: 'sleepfallsleepma',
+          name: 'sleepfallsleepma',
           type: 'sleep',
           value: analysis[i][1],
           date: analysis[i][0]
@@ -2939,7 +2943,12 @@ resizeCanvas = function (id, height){
 
 function capitaliseFirstLetter(string)
 {
+  try {
     return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+  catch(err) {
+    console.log(err);
+  }
 }
 
 function runtimePopup(path, popupafterclose) {
