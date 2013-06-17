@@ -866,6 +866,8 @@ var gpxUI = (function(gpxUI) {
       if(data.length > 0 && $(".gpx_links-container").length == 0) {
         var HTML = $('<div class="gpx_links-container" id="gpx_links-container"><b>GPX Trails</b><br></div>');
         $('#gpx_events-container').append(HTML);
+      } else if (data.length == 0) {
+        $('#gpx_links-container').remove();
       }
       for(var i = 0; i < data.length; i++) {
         var HTML = $('<a href="#" onClick="gpxUI.loadGPX(\'' + data[i].link + '\');">' + data[i].link + '</a><br>');
