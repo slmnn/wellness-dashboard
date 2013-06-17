@@ -1,3 +1,20 @@
+var common = (function(common) {
+  return {
+    determineBaseURL:function(port) {
+      if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
+        return 'https://devwellness.cs.tut.fi/';
+      var result = "https://";
+      result += window.document.location.host;
+      port = typeof port !== 'undefined' ? port : window.document.location.port;
+      if(port == "")
+        result += "/";
+      else
+        result += ":" + port + "/";
+      return result;
+    }
+  };
+}());
+
 var userData = (function(userData) {
 	var _data = undefined;
 	var _credentials = undefined;
@@ -828,18 +845,88 @@ var twitterUI = (function(twitterUI) {
 }());
 
 var gpxUI = (function(gpxUI) {
+  var _baseURL = common.determineBaseURL();
+  
+  var _loadGPX = function(link) {
+    $.ajax(
+      {
+        url: _baseURL + link.substring(1),
+        type: 'GET',
+        headers: {
+          "Authorization": userData.credentials
+        }
+      }
+    ).done(function(data) {
+      amplify.publish('gpx_show_map', data);
+    });    
+  };
+  
   var _init = function() {
     amplify.subscribe('gpx_available', function(data) {
-      console.log('gpx_available', data);
+      if(data.length > 0 && $(".gpx_links-container").length == 0) {
+        var HTML = $('<div class="gpx_links-container" id="gpx_links-container"><b>GPX Trails</b><br></div>');
+        $('#gpx_events-container').append(HTML);
+      }
+      for(var i = 0; i < data.length; i++) {
+        var HTML = $('<a href="#" onClick="gpxUI.loadGPX(\'' + data[i].link + '\');">' + data[i].link + '</a><br>');
+        $("#gpx_links-container").append(HTML);
+      }
     });
+    
+    amplify.subscribe('gpx_show_map', function(data) {
+      //var HTML = $('<div id="map" style="width: 200px; height: 100px;"></div>');
+      //$("#gpx_events-container").append(HTML);
+      
+      var maxWidth = window.innerWidth * 0.8;
+      var maxHeight = window.innerHeight * 0.8;
+      var template = "<div data-role='popup' class='ui-content mapPopup' style='min-width:" + maxWidth + "px; min-height:" + maxHeight + "px;'>" 
+          + "<a href='#' data-role='button' data-theme='g' data-icon='delete' data-iconpos='notext' " 
+          + " class='ui-btn-right closePopup'>Close</a> "
+          + "<div id='map' style='overflow:hidden; min-width:" + maxWidth + "px; min-height:" + maxHeight + "px;'></div></div>";
+      
+      var popupafterclose = undefined;
+      popupafterclose = popupafterclose ? popupafterclose : function () {};
+     
+      $.mobile.activePage.append(template).trigger("create");
+     
+      $.mobile.activePage.find(".closePopup").bind("tap", function (e) {
+        $.mobile.activePage.find(".mapPopup").popup("close");
+      });
+     
+      $.mobile.activePage.find(".mapPopup").popup({ dismissible: false, history: false }).popup("open").bind({
+        popupafterclose: function () {
+          $(this).unbind("popupafterclose").remove();
+          popupafterclose();
+          $.mobile.ajaxEnabled = true;
+        },
+        popupafteropen: function() { 
+          var mapOptions = {
+            zoom: 8,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+          };
+          var map = new google.maps.Map(document.getElementById("map"), mapOptions);
+          var parser = new GPXParser(data, map);
+          parser.setTrackColour("#ff0000");     // Set the track line colour
+          parser.setTrackWidth(5);              // Set the track line width
+          parser.setMinTrackPointDelta(0.001);  // Set the minimum distance between track points
+          parser.centerAndZoom(data);
+          parser.addTrackpointsToMap();         // Add the trackpoints
+          parser.addWaypointsToMap();           // Add the waypoints
+        }
+      });
+    });
+    
     if($(".gpx_events-container").length == 0) {
       var targetDivID = tabUI.newTab('Trails');
-      var HTML = $('<div class="gpx_events-container" id="gpx_events-container"></div>');
+      var HTML = $('<div class="gpx_events-container table-wrapper" id="gpx_events-container"></div>');
       $('#' + targetDivID).append(HTML);
     }
-    var HTML = $('<div class="gpx_upload table-wrapper" id="gpx_upload">' + 
+    var HTML = $('<div class="gpx_upload" id="gpx_upload">' + 
       '<b>Upload GPX File</b></br>' +
-      '<input type="file" id="input" onchange="gpxUI.handleFiles(this.files)">' +
+      //'<form id="gpx_upload_form" enctype="multipart/form-data" method="POST" action="https://devwellness.cs.tut.fi/gpx/upload/">' + 
+      '<input type="file" name="file" onchange="gpxUI.handleFiles(this.files)">' + 
+      //'<input type="submit" value="Upload"/>' +
+      //'</form>' +
       '<span id="gpx_upload_result"></span>' +
       '</div>');
     $("#gpx_events-container").append(HTML);
@@ -848,8 +935,6 @@ var gpxUI = (function(gpxUI) {
   var _handleFiles = function(files) {
     var file = files[0];
     var xhr = new XMLHttpRequest();
-    xhr.file = file; // not necessary if you create scopes like this
-    xhr.withCredentials = true;
     xhr.addEventListener('progress', function(e) {
         var done = e.position || e.loaded, total = e.totalSize || e.total;
         console.log('xhr progress: ' + (Math.floor(done/total*1000)/10) + '%');
@@ -865,13 +950,27 @@ var gpxUI = (function(gpxUI) {
             console.log(['xhr upload complete', e]);
         }
     };
-    xhr.open('post', 'https://devwellness.cs.tut.fi/gpx/upload/', false);
+    xhr.open('post', 'https://devwellness.cs.tut.fi/gpx/upload/', true);
     xhr.withCredentials = true;
     xhr.setRequestHeader('Authorization', userData.credentials);
-    xhr.send(file);
+    xhr.setRequestHeader('Accept', '*/*');
+    //var boundary = '---------------------------7da24f2e50046';
+    //xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
+    //
+    //file = '--' + boundary + '\r\n' + 
+    //    'Content-Disposition: form-data; name="file"; filename="XMLHtppRequest_GPX"' + '\r\n' + 
+//  //      'Content-Type: text/plain' + '\r\n' + 
+    //    '' + '\r\n' + 
+    //    file + '\r\n' + 
+    //    '--' + boundary + '--' + 
+        
+    var formData = new FormData();
+    formData.append("file", file);
+    xhr.send(formData);
   }
   return {
     init: _init,
+    loadGPX: _loadGPX,
     handleFiles: _handleFiles
   }
   
@@ -1054,22 +1153,7 @@ var weatherAPI = (function(weatherAPI) {
 	}
 }());
 
-var common = (function(common) {
-  return {
-    determineBaseURL:function(port) {
-      if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
-        return 'https://devwellness.cs.tut.fi/';
-      var result = "https://";
-      result += window.document.location.host;
-      port = typeof port !== 'undefined' ? port : window.document.location.port;
-      if(port == "")
-        result += "/";
-      else
-        result += ":" + port + "/";
-      return result;
-    }
-  };
-}());
+
 
 var wellnessAPISingleDay = (function(wellnessAPISingleDay) {  
 	var baseurl = common.determineBaseURL();
@@ -1592,6 +1676,17 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			}
 		).done(done_cb);
 	};
+  
+  var _getGPX = function() {
+		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
+		_getData('gpx/raw/' + daypath + '/days/1/', function(data) {
+      if(typeof(data) != 'object')
+        var json = $.parseJSON(data);
+      else 
+        var json = data;
+      amplify.publish('gpx_available', json.data);
+    });
+  };
 
 	var _getWeatherData =	function(date) {
 		var daypath = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + (date.getDate());
@@ -1650,6 +1745,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         });
       }
 		});
+    
 		_getData('api/analysis/sleepeffma/' + daypath + '/days/1/7/', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
@@ -1676,6 +1772,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         });
       }
 		});
+    
 		_getData('api/analysis/sleeptimema/' + daypath + '/days/1/7/', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
@@ -1702,6 +1799,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         });
       }
 		});
+    
 		_getData('api/analysis/sleepwakeningsma/' + daypath + '/days/1/7/', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
@@ -1999,6 +2097,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		_getWeatherData(_currentday);
     
     gpxUI.init();
+    _getGPX();
     
 		if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
       _getWeatherData(_currentday.clone().add(1).days());
@@ -2084,6 +2183,8 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       twitterUI.clear();
       _getTwitterData();
     }
+    
+    _getGPX();
 
     $("div[id*=weather_variables-container]").remove();
 		_getWeatherData(_currentday);
