@@ -945,7 +945,7 @@ var gpxUI = (function(gpxUI) {
     }
     var HTML = $('<div class="gpx_upload" id="gpx_upload">' + 
       '<b>Upload GPX File</b></br>' +
-      '<input type="file" name="file" onchange="gpxUI.handleFiles(this.files)"><br>' + 
+      '<input type="file" name="file" onchange="gpxUI.handleFiles(this.files)" multiple /><br>' + 
       '<span id="gpx_upload_result"></span>' +
       '</div>');
     $("#gpx_events-container").append(HTML);
@@ -968,7 +968,7 @@ var gpxUI = (function(gpxUI) {
       xhr.onreadystatechange = function(e) {
           if ( 4 == this.readyState ) {
             console.log(['xhr upload complete', e]);
-            $('#gpx_upload_result').text('Upload complete');
+            $('#gpx_upload_result').text('Upload complete (' + e.currentTarget.status + ' ' + e.currentTarget.statusText + ')');
             setTimeout("$('#gpx_upload_result').text('');", 5000);
           }
       };
