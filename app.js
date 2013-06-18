@@ -1,4 +1,4 @@
-var common = (function(common) {
+var Common = (function(Common) {
   return {
     determineBaseURL:function(port) {
       if(window.document.location.host == "ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:1337")
@@ -11,6 +11,35 @@ var common = (function(common) {
       else
         result += ":" + port + "/";
       return result;
+    },
+    parseUTCToLocalTime:function(UTCdateString) {
+      try {
+        var localTime = new Date(
+          Date.parse(UTCdateString).getTime() 
+            + (Date.parse(UTCdateString).getUTCOffset() / 100 * 60 * 60 * 1000))
+      } catch (err) {
+        var localTime = null;
+      }
+      return localTime;
+    },
+    changeUTCStringToLocalString:function(UTCdateString) {
+      try {
+        var local = this.parseUTCToLocalTime(UTCdateString);
+        var result = local.toString('yyyy-MM-dd HH:mm');
+      } catch(err) {
+        var result = '';
+      }
+      return result;
+    },
+    changeTimelineToLocal:function(arr) {
+      for(var i = 0; i < arr.length; i++) {
+        if(arr[i] != null) {
+          arr[i][0] = this.changeUTCStringToLocalString(arr[i][0]);
+        } else {
+          continue;
+        }
+      }
+      return arr;
     }
   };
 }());
@@ -203,17 +232,8 @@ highchartsUI = (function(highchartsUI) {
                 min: data.min,
                 showEmpty: false,
                 title: {
-//                    align: 'high',
                     text: data.name + ' ' + data.unit
                 },
-                //labels: {
-                //    formatter: function() {
-                //       return this.value + ' ' + data.unit;
-                //    }
-                    //style: {
-                    //   color: '#4572A7'
-                    //}
-                //},
                 opposite: false
             }, true, true);
       }
@@ -262,9 +282,9 @@ highchartsUI = (function(highchartsUI) {
 		var result = [];
 		var i = 0;
 		try {
-			while(Date.parse(data[i][0]).isBefore(start)) i++;
+			while(Common.parseUTCToLocalTime(data[i][0]).isBefore(start)) i++;
 			for(var j = i; j < data.length; j++) {
-				if(Date.parse(data[j][0]).isAfter(end)) break;
+				if(Common.parseUTCToLocalTime(data[j][0]).isAfter(end)) break;
 				result.push(data[j][1]);
 			}
 		} catch(err) {
@@ -823,7 +843,7 @@ var twitterUI = (function(twitterUI) {
           '</div>');
         $("#some_variables-container").append(HTML);
         for(var i = 0; i < data.length; i++) {
-          var date = Date.parse(data[i].created_at);
+          var date = Common.parseUTCToLocalTime(data[i].created_at);
           var time = date.toString('HH:mm')
           var text = processTweetLinks(data[i].text)
           var HTML = $('<tr><td class="twitterdata"><b>' + time + '</b></td><td class="twitterdata">' + text + '</td></tr>');
@@ -845,7 +865,7 @@ var twitterUI = (function(twitterUI) {
 }());
 
 var gpxUI = (function(gpxUI) {
-  var _baseURL = common.determineBaseURL();
+  var _baseURL = Common.determineBaseURL();
   
   var _loadGPX = function(link) {
     $.ajax(
@@ -925,50 +945,42 @@ var gpxUI = (function(gpxUI) {
     }
     var HTML = $('<div class="gpx_upload" id="gpx_upload">' + 
       '<b>Upload GPX File</b></br>' +
-      //'<form id="gpx_upload_form" enctype="multipart/form-data" method="POST" action="https://devwellness.cs.tut.fi/gpx/upload/">' + 
-      '<input type="file" name="file" onchange="gpxUI.handleFiles(this.files)">' + 
-      //'<input type="submit" value="Upload"/>' +
-      //'</form>' +
+      '<input type="file" name="file" onchange="gpxUI.handleFiles(this.files)"><br>' + 
       '<span id="gpx_upload_result"></span>' +
       '</div>');
     $("#gpx_events-container").append(HTML);
   };
   
   var _handleFiles = function(files) {
-    var file = files[0];
-    var xhr = new XMLHttpRequest();
-    xhr.addEventListener('progress', function(e) {
-        var done = e.position || e.loaded, total = e.totalSize || e.total;
-        console.log('xhr progress: ' + (Math.floor(done/total*1000)/10) + '%');
-    }, false);
-    if ( xhr.upload ) {
-        xhr.upload.onprogress = function(e) {
-            var done = e.position || e.loaded, total = e.totalSize || e.total;
-            console.log('xhr.upload progress: ' + done + ' / ' + total + ' = ' + (Math.floor(done/total*1000)/10) + '%');
-        };
-    }
-    xhr.onreadystatechange = function(e) {
-        if ( 4 == this.readyState ) {
+    for(var i = 0; i < files.length; i++) {
+      var file = files[i];
+      var xhr = new XMLHttpRequest();
+      xhr.addEventListener('progress', function(e) {
+          var done = e.position || e.loaded, total = e.totalSize || e.total;
+          console.log('xhr progress: ' + (Math.floor(done/total*1000)/10) + '%');
+      }, false);
+      if ( xhr.upload ) {
+          xhr.upload.onprogress = function(e) {
+              var done = e.position || e.loaded, total = e.totalSize || e.total;
+              $('#gpx_upload_result').text('Upload progress: ' + done + ' / ' + total + ' = ' + (Math.floor(done/total*1000)/10) + '%');
+          };
+      }
+      xhr.onreadystatechange = function(e) {
+          if ( 4 == this.readyState ) {
             console.log(['xhr upload complete', e]);
-        }
-    };
-    xhr.open('post', 'https://devwellness.cs.tut.fi/gpx/upload/', true);
-    xhr.withCredentials = true;
-    xhr.setRequestHeader('Authorization', userData.credentials);
-    xhr.setRequestHeader('Accept', '*/*');
-    //var boundary = '---------------------------7da24f2e50046';
-    //xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
-    //
-    //file = '--' + boundary + '\r\n' + 
-    //    'Content-Disposition: form-data; name="file"; filename="XMLHtppRequest_GPX"' + '\r\n' + 
-//  //      'Content-Type: text/plain' + '\r\n' + 
-    //    '' + '\r\n' + 
-    //    file + '\r\n' + 
-    //    '--' + boundary + '--' + 
-        
-    var formData = new FormData();
-    formData.append("file", file);
-    xhr.send(formData);
+            $('#gpx_upload_result').text('Upload complete');
+            setTimeout("$('#gpx_upload_result').text('');", 5000);
+          }
+      };
+      xhr.open('post', 'https://devwellness.cs.tut.fi/gpx/upload/', true);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('Authorization', userData.credentials);
+      xhr.setRequestHeader('Accept', '*/*');
+
+      var formData = new FormData();
+      formData.append("file", file);
+      xhr.send(formData);
+    }
   }
   return {
     init: _init,
@@ -1013,9 +1025,9 @@ var calendarUI = (function(calendarUI) {
             console.log(i);
             var start, startstr, end, endstr, duration;
             if(typeof(events.items[i].start.dateTime) != 'undefined' && typeof(events.items[i].start.dateTime) != 'undefined') {
-              start = Date.parse(events.items[i].start.dateTime);
+              start = Common.parseUTCToLocalTime(events.items[i].start.dateTime);
               startstr = start.toString("HH:mm") + ' - ';
-              end = Date.parse(events.items[i].end.dateTime); 
+              end = Common.parseUTCToLocalTime(events.items[i].end.dateTime); 
               endstr = end.toString("HH:mm");
               duration = end.getTime() - start.getTime();
             } else {
@@ -1158,7 +1170,7 @@ var weatherAPI = (function(weatherAPI) {
 
 
 var wellnessAPISingleDay = (function(wellnessAPISingleDay) {  
-	var baseurl = common.determineBaseURL();
+	var baseurl = Common.determineBaseURL();
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];  
   
 	var _sleepCB = function(data) {
@@ -1215,13 +1227,13 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           var data = fitbit.minuteData.data;
           // Push one bogus stage to the end. Parser needs to see change in stage
           // value to make a push to the array.
-          data.push(['0000-00-00T00:00:00', 'X']);
+          data.push(['0000-00-00T00:00:00Z', 'X']);
           var stageDur = 0;
           var d1, d2;
           for(j = 0; j < data.length; j++) {
             if(j == 0) {
               stageDur += 5;
-              d1 = Date.parse(data[j][0]);
+              d1 = Common.parseUTCToLocalTime(data[j][0]);
               continue;
             }
             if( data[j][1] !=  data[j-1][1]) {
@@ -1247,7 +1259,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
                 });
               }
               stageDur = 5;
-              d1 = Date.parse( data[j][0]);
+              d1 = Common.parseUTCToLocalTime(data[j][0]);
             } else {
               stageDur += 5;
             }
@@ -1276,7 +1288,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         for(j = 0; j < data.length; j++) {
           if(j == 0) {
             stageDur += 5;
-            d1 = Date.parse(data[j][0]);
+            d1 = Common.parseUTCToLocalTime(data[j][0]);
             continue;
           }
           if(data[j][1] != data[j-1][1]) {
@@ -1309,7 +1321,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               });
             }
             stageDur = 5;
-            d1 = Date.parse(data[j][0]);
+            d1 = Common.parseUTCToLocalTime(data[j][0]);
           } else {
             stageDur += 5;
           }
@@ -1327,11 +1339,11 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 //        $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(beddit.time_in_bed/3600 * 100) / 100, Math.round((beddit.time_in_bed-beddit.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
         
         if(noise.length > 0) {
-          var nightstart = Date.parse(noise[0][0]).getTime();
-          var nightend = Date.parse(noise[noise.length - 1][0]).getTime();
+          var nightstart = Common.parseUTCToLocalTime(noise[0][0]).getTime();
+          var nightend = Common.parseUTCToLocalTime(noise[noise.length - 1][0]).getTime();
           var dayDurationMs = 24 * 60 * 60 * 1000 - (nightend - nightstart);
           var dur = dayDurationMs / (5*60*1000);
-          console.log(Date.parse(noise[0][0]), Date.parse(noise[noise.length - 1][0]), 'Day duration seems to be ' + secondsToString(dur*60*5)); 
+          console.log(Common.parseUTCToLocalTime(noise[0][0]), Common.parseUTCToLocalTime(noise[noise.length - 1][0]), 'Day duration seems to be ' + secondsToString(dur*60*5)); 
           for(var k = 0; k < dur - 1; k++) {
             noise.push(null);
             luminosity.push(null);
@@ -1346,18 +1358,24 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       }
 		}
 		
+    
+    
 		if(actigram.length > 0) {
-    amplify.publish('new_timeline_dataset',
-      {'name':'Actigram','id':'actigram','unit':'','visible':true,'min':0,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(actigram[0][0]),'data':actigram,'type':'spline'});
+      actigram = Common.changeTimelineToLocal(actigram);
+      amplify.publish('new_timeline_dataset',
+        {'name':'Actigram','id':'actigram','unit':'','visible':true,'min':0,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(actigram[0][0]),'data':actigram,'type':'spline'});
     } if(pulse.length > 0) {
-    amplify.publish('new_timeline_dataset',
-      {'name':'Pulse','id':'pulse','min':null,'unit':'bpm','visible':true,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(pulse[0][0]),'data':pulse,'type':'spline'});
+      pulse = Common.changeTimelineToLocal(pulse);
+      amplify.publish('new_timeline_dataset',
+        {'name':'Pulse','id':'pulse','min':null,'unit':'bpm','visible':true,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(pulse[0][0]),'data':pulse,'type':'spline'});
     } if(noise.length > 0) {
-    amplify.publish('new_timeline_dataset',
-      {'name':'Noise','id':'noise','min':0,'unit':'dB','visible':false,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
+      noise = Common.changeTimelineToLocal(noise);
+      amplify.publish('new_timeline_dataset',
+        {'name':'Noise','id':'noise','min':0,'unit':'dB','visible':false,'pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(noise[0][0]),'data':noise,'type':'area'});
     } if(luminosity.length > 0) {
-    amplify.publish('new_timeline_dataset',
-      {'name':'Luminosity','id':'luminosity','min':0,'visible':false,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
+      luminosity = Common.changeTimelineToLocal(luminosity);
+      amplify.publish('new_timeline_dataset',
+        {'name':'Luminosity','id':'luminosity','min':0,'visible':false,'unit':'lm','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(luminosity[0][0]),'data':luminosity,'type':'area'});
     }
 		
 		var stages = [];
@@ -1727,7 +1745,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         var analysis = data;
       for(var i = 0; i < analysis.required_user_action.length; i++) {
         var act = analysis.required_user_action[i];
-        var baseURL = common.determineBaseURL();
+        var baseURL = Common.determineBaseURL();
         amplify.publish('analysis_possible', {
           'id': act.id,
           'path': baseURL.substring(0,baseURL.length-1) + act.path + '?dashboard=true',
@@ -1743,7 +1761,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           'type': capitaliseFirstLetter(ana.type),
           'name': capitaliseFirstLetter(ana.name),
           'value': ana.value,
-          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+          'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
         });
       }
 		});
@@ -1761,7 +1779,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           id: 'sleepeffma',
           name: 'sleepeffma',
           type: 'sleep',
-          value: analysis[i][1],
+          value: Math.round(analysis[i][1] * 100) / 100,
           date: analysis[i][0]
         };
         if(ana == null) continue;
@@ -1770,7 +1788,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           'type': capitaliseFirstLetter(ana.type),
           'name': capitaliseFirstLetter(ana.name),
           'value': ana.value,
-          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+          'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
         });
       }
 		});
@@ -1797,7 +1815,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           'type': capitaliseFirstLetter(ana.type),
           'name': capitaliseFirstLetter(ana.name),
           'value': ana.value,
-          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+          'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
         });
       }
 		});
@@ -1824,7 +1842,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           'type': capitaliseFirstLetter(ana.type),
           'name': capitaliseFirstLetter(ana.name),
           'value': ana.value,
-          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+          'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
         });
       }
 		});
@@ -1850,7 +1868,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           'type': capitaliseFirstLetter(ana.type),
           'name': capitaliseFirstLetter(ana.name),
           'value': ana.value,
-          'date': '(' + Date.parse(ana.date).toString('MM/dd HH:mm') + ')'
+          'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
         });
       }
 		});
@@ -1897,7 +1915,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         var json = data;
 
 			if(json[0].fitbit != undefined && json[0].fitbit.activities != undefined) {
-				var activityDay = Date.parse(json[0].date);
+				var activityDay = Common.parseUTCToLocalTime(json[0].date);
 				var year = activityDay.getFullYear();
 				var month = activityDay.getMonth();
 				var day = activityDay.getDate();
@@ -2044,6 +2062,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
                 else
                   mySteps.push(data[i]);
               }
+              mySteps = Common.changeTimelineToLocal(mySteps);
               amplify.publish('new_timeline_dataset',
                 {'name':'Steps','id':'steps','min':0,'unit':'','visible':true,'type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(mySteps[0][0]),'data':mySteps}
               );
@@ -2289,7 +2308,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 }());
 
 var wellnessAPI =(function(wellnessAPI) {
-	var baseurl = common.determineBaseURL();
+	var baseurl = Common.determineBaseURL();
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 	var _getData = function(apicall, cb) {
