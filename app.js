@@ -881,18 +881,35 @@ var gpxUI = (function(gpxUI) {
     });    
   };
   
+  var _clear = function() {
+    $('#gpx_links-container').remove();
+  };
+  
   var _init = function() {
+
     amplify.subscribe('gpx_available', function(data) {
-      if(data.length > 0 && $(".gpx_links-container").length == 0) {
+      if(data != null && $(".gpx_links-container").length == 0) {
         var HTML = $('<div class="gpx_links-container" id="gpx_links-container"><b>GPX Trails</b><br></div>');
         $('#gpx_events-container').append(HTML);
-      } else if (data.length == 0) {
+      } else if (data == null) {
         $('#gpx_links-container').remove();
       }
-      for(var i = 0; i < data.length; i++) {
-        var HTML = $('<a href="#" onClick="gpxUI.loadGPX(\'' + data[i].link + '\');">' + data[i].link + '</a><br>');
-        $("#gpx_links-container").append(HTML);
+      //for(var i = 0; i < data.length; i++) {
+      //  var HTML = $('<a href="#" onClick="gpxUI.loadGPX(\'' + data[i].link + '\');">' + data[i].link + '</a><br>');
+      //  $("#gpx_links-container").append(HTML);
+      //}
+      var start, end = ""
+      if(typeof data.startDate != 'undefined') {
+        start = Common.parseUTCToLocalTime(data.startDate.data).toString('hh:mm');
       }
+      if(typeof data.endDate != 'undefined') {
+        end = Common.parseUTCToLocalTime(data.endDate.data).toString('hh:mm');
+      }
+      var HTML = $('<span style="float:left; font-weight:bold; width: 80px;">' 
+        + start + '-' + end + '</span>'
+        + '<span style="float:right; width:220px"><a href="#" onClick="gpxUI.loadGPX(\'' 
+        + data.gpxdata.link + '\');">' + data.gpxdata.sportType + '</a></span><br>');
+      $("#gpx_links-container").append(HTML);      
     });
     
     amplify.subscribe('gpx_show_map', function(data) {
@@ -904,6 +921,7 @@ var gpxUI = (function(gpxUI) {
       var template = "<div data-role='popup' class='ui-content mapPopup' style='min-width:" + maxWidth + "px; min-height:" + maxHeight + "px;'>" 
           + "<a href='#' data-role='button' data-theme='g' data-icon='delete' data-iconpos='notext' " 
           + " class='ui-btn-right closePopup'>Close</a> "
+          + "<div id='gpx_metadata'></div>"
           + "<div id='map' style='overflow:hidden; min-width:" + maxWidth + "px; min-height:" + maxHeight + "px;'></div></div>";
       
       var popupafterclose = undefined;
@@ -934,6 +952,24 @@ var gpxUI = (function(gpxUI) {
           parser.centerAndZoom(data);
           parser.addTrackpointsToMap();         // Add the trackpoints
           parser.addWaypointsToMap();           // Add the waypoints
+          
+          // Let's try to get some more details out of the GPX file
+          var gpxJson = $.xml2json(data);
+          console.log('GPX as JSON', gpxJson);
+          $('#gpx_metadata').empty();
+          if(typeof gpxJson.metadata.name != undefined) {
+            $('#gpx_metadata').text(gpxJson.metadata.name);
+          }
+          if(typeof gpxJson.trk.trkseg == 'object' && typeof gpxJson.trk.trkseg.trkpt == 'object') {
+            var result = [];
+            for(var i = 0; i < gpxJson.trk.trkseg.trkpt.length; i++) {
+              result.push([gpxJson.trk.trkseg.trkpt[i].time.split('.')[0], parseInt(gpxJson.trk.trkseg.trkpt[i].ele)]);
+            }
+            // result = Common.changeTimelineToLocal(result);
+            //amplify.publish('new_timeline_dataset',
+            //  {'name':'Elevation','id':'ele','min':0,'unit':'m','visible':true,'type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(result[0][0]),'data':result}
+            //);
+          }
         }
       });
     });
@@ -972,7 +1008,7 @@ var gpxUI = (function(gpxUI) {
             setTimeout("$('#gpx_upload_result').text('');", 5000);
           }
       };
-      xhr.open('post', 'https://devwellness.cs.tut.fi/gpx/upload/', true);
+      xhr.open('post', Common.determineBaseURL() + 'gpx/upload', true);
       xhr.withCredentials = true;
       xhr.setRequestHeader('Authorization', userData.credentials);
       xhr.setRequestHeader('Accept', '*/*');
@@ -985,6 +1021,7 @@ var gpxUI = (function(gpxUI) {
   return {
     init: _init,
     loadGPX: _loadGPX,
+    clear: _clear,
     handleFiles: _handleFiles
   }
   
@@ -1699,7 +1736,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
   
   var _getGPX = function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('gpx/raw/' + daypath + '/days/1/', function(data) {
+		_getData('gpx/raw/' + daypath + '/days/1', function(data) {
       if(typeof(data) != 'object')
         var json = $.parseJSON(data);
       else 
@@ -1710,7 +1747,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 
 	var _getWeatherData =	function(date) {
 		var daypath = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + (date.getDate());
-		_getData('weather/history/' + daypath + '/', function(data) {
+		_getData('weather/history/' + daypath + '', function(data) {
       if(typeof(data) != 'object')
         var json = $.parseJSON(data);
       else 
@@ -1721,24 +1758,24 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 	
 	var _getWeightData = function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('unify/measure/' + daypath + '/days/1/', _withingsCB);
+		_getData('data/' + userData.username + '/merge/measure/' + daypath + '/days/1', _withingsCB);
 	};
 
 	var _getSleepData =	function() {
 		// We should get yesterdays and tomorrows data
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('unify/sleep/' + daypath + '/days/2/?inline=true', _sleepCB);
+		_getData('data/' + userData.username + '/merge/sleep/' + daypath + '/days/2?inline=true', _sleepCB);
 	};
 
 	var _getFitbitSummaryData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('fitbit/api/activities/' + daypath + '/', _fitbitSummaryCB);
+		_getData('fitbit/api/activities/' + daypath + '', _fitbitSummaryCB);
 	};
 	
   var _getAnalysisData =	function() {
     analysisUI.clear();
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('api/analysis/' + daypath + '/', function(data) {
+		_getData('api/analysis/' + daypath + '', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
       else 
@@ -1766,7 +1803,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       }
 		});
     
-		_getData('api/analysis/sleepeffma/' + daypath + '/days/1/7/', function(data) {
+		_getData('api/analysis/sleepeffma/' + daypath + '/days/1/7', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
       else 
@@ -1793,7 +1830,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       }
 		});
     
-		_getData('api/analysis/sleeptimema/' + daypath + '/days/1/7/', function(data) {
+		_getData('api/analysis/sleeptimema/' + daypath + '/days/1/7', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
       else 
@@ -1820,7 +1857,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       }
 		});
     
-		_getData('api/analysis/sleepwakeningsma/' + daypath + '/days/1/7/', function(data) {
+		_getData('api/analysis/sleepwakeningsma/' + daypath + '/days/1/7', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
       else 
@@ -1846,7 +1883,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         });
       }
 		});
-		_getData('api/analysis/sleepfallsleepma/' + daypath + '/days/1/7/', function(data) {
+		_getData('api/analysis/sleepfallsleepma/' + daypath + '/days/1/7', function(data) {
       if(typeof(data) != 'object')
         var analysis = $.parseJSON(data);
       else 
@@ -1876,7 +1913,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 	
   var _getTwitterData =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('twitter/api/tweets/' + daypath + '/', function(data) {
+		_getData('twitter/api/tweets/' + daypath + '', function(data) {
       if(typeof(data) != 'object')
         var tweets = $.parseJSON(data).data;
       else 
@@ -1888,7 +1925,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 	var _getCalendarData = function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
 		for(var i = 0; i < userData.calendars.length; i++) {
-      var url = 'calendar/id/' + userData.calendars[i] + '/events/' + daypath + '/';
+      var url = 'calendar/id/' + userData.calendars[i] + '/events/' + daypath + '';
       var cacheValue; // = amplify.store(url); // TODO: there is an issue with the cache
       if(typeof(cacheValue) != 'undefined') {
         console.log("Found from local store " + url);
@@ -1908,11 +1945,18 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 
 	var _getFitbitActivityDataset =	function() {
 		var daypath = _currentday.getFullYear() + '/' + (_currentday.getMonth() + 1) + '/' + (_currentday.getDate());
-		_getData('unify/activity/' + daypath + '/days/1/', function(data) {
+		_getData('data/' + userData.username + '/merge/activity/' + daypath + '/days/1', function(data) {
       if(typeof(data) != 'object')
         var json = $.parseJSON(data);
       else 
         var json = data;
+      
+      gpxUI.clear();
+      if(json[0].gpx.length > 0) {
+        for(var i = 0; i < json[0].gpx.length; i++) {
+          amplify.publish('gpx_available', json[0].gpx[i]);
+        }
+      }
 
 			if(json[0].fitbit != undefined && json[0].fitbit.activities != undefined) {
 				var activityDay = Common.parseUTCToLocalTime(json[0].date);
@@ -2084,7 +2128,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 	};
 
 	var _disableNextDayButton = function() {
-		if(Date.compare(_currentday.clearTime(), _today) > 0) {
+		if(Date.compare(_currentday.clearTime(), _today) >= 0) {
 			$( "#button-next" ).button( "disable" );
 		}	else {
 			$( "#button-next" ).button( "enable" );
@@ -2118,7 +2162,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		_getWeatherData(_currentday);
     
     gpxUI.init();
-    _getGPX();
+    // _getGPX();
     
 		if(!Date.equals(Date.today(), _currentday.clone().clearTime())) {
       _getWeatherData(_currentday.clone().add(1).days());
@@ -2204,8 +2248,6 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       twitterUI.clear();
       _getTwitterData();
     }
-    
-    _getGPX();
 
     $("div[id*=weather_variables-container]").remove();
 		_getWeatherData(_currentday);
@@ -2246,7 +2288,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			var credentials = 'Basic ' + Base64.encode(username + ":" + password);
 
 			// First we check the services available for the user
-			var apicall = 'user/services/';
+			var apicall = 'user/services';
 			var myurl = baseurl + apicall;
 			$.ajax(
 				{
@@ -2531,7 +2573,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _populateChart = function() {		
     // Sleep
 		if(userData.fitbit || userData.beddit) {
-      _getData('unify/sleep/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('data/' + userData.username + '/merge/sleep/' + _daypath(_currentday) + 'days/' + _period + '', function(data) {
 
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
@@ -2570,7 +2612,7 @@ var wellnessAPI =(function(wellnessAPI) {
        
         _chart.redraw();
       });
-      _getData('api/analysis/sleepeffma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+      _getData('api/analysis/sleepeffma/' + _daypath(_currentday) + 'days/' + _period + '/7', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2589,7 +2631,7 @@ var wellnessAPI =(function(wellnessAPI) {
           _addAxisAndSeries('sleepeffma', 'Sleep efficiency (Av.)', result);
         _chart.redraw();
       });
-      _getData('api/analysis/sleeptimema/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+      _getData('api/analysis/sleeptimema/' + _daypath(_currentday) + 'days/' + _period + '/7', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2608,7 +2650,7 @@ var wellnessAPI =(function(wellnessAPI) {
           _addAxisAndSeries('sleeptimema', 'Sleep time (Av.)', result);
         _chart.redraw();
       });
-      _getData('api/analysis/sleepwakeningsma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+      _getData('api/analysis/sleepwakeningsma/' + _daypath(_currentday) + 'days/' + _period + '/7', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2627,7 +2669,7 @@ var wellnessAPI =(function(wellnessAPI) {
           _addAxisAndSeries('sleepwakeningsma', 'Awakenings (Av.)', result);
         _chart.redraw();
       });
-      _getData('api/analysis/sleepfallsleepma/' + _daypath(_currentday) + 'days/' + _period + '/7/', function(data) {
+      _getData('api/analysis/sleepfallsleepma/' + _daypath(_currentday) + 'days/' + _period + '/7', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2650,7 +2692,7 @@ var wellnessAPI =(function(wellnessAPI) {
     
     // Activities
     if(userData.fitbit) {
-      _getData('unify/activity/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('data/' + userData.username + '/merge/activity/' + _daypath(_currentday) + 'days/' + _period + '', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2691,7 +2733,7 @@ var wellnessAPI =(function(wellnessAPI) {
     
     // Weight, height, blood pressure
     if(userData.withings) {
-      _getData('unify/measure/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('data/' + userData.username + '/merge/measure/' + _daypath(_currentday) + 'days/' + _period + '', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2733,7 +2775,7 @@ var wellnessAPI =(function(wellnessAPI) {
     
     // Weather
     if(true) {
-      _getData('weather/history/overview/' + _daypath(_currentday) + 'days/' + _period + '/', function(data) {
+      _getData('weather/history/overview/' + _daypath(_currentday) + 'days/' + _period + '', function(data) {
         if(typeof(data) != 'object')
           var json = $.parseJSON(data);
         else 
@@ -2779,7 +2821,7 @@ var wellnessAPI =(function(wellnessAPI) {
     
     // First we check the services available for the user
     // If the call is successfull we consider credentials to be ok
-    var apicall = 'user/services/';
+    var apicall = 'user/services';
     var myurl = baseurl + apicall;
     
     // Trying to use IE to make the call but no avail
