@@ -499,7 +499,10 @@ highchartsUI = (function(highchartsUI) {
 	return {
 		init: _init,
 		chart: _chart,
-    clear: _clear
+    clear: _clear,
+    resetZoom: function() {
+      _chart().zoomOut();
+    }
 	}
 }());
 
@@ -866,6 +869,7 @@ var twitterUI = (function(twitterUI) {
 
 var gpxUI = (function(gpxUI) {
   var _baseURL = Common.determineBaseURL();
+  var _gpxTrailsDrawn = [];  
   
   var _loadGPX = function(link) {
     $.ajax(
@@ -877,12 +881,32 @@ var gpxUI = (function(gpxUI) {
         }
       }
     ).done(function(data) {
-      amplify.publish('gpx_show_map', data);
+      amplify.publish('gpx_show_map', {'data':data, 'url':link});
     });    
   };
   
   var _clear = function() {
     $('#gpx_links-container').remove();
+    _gpxTrailsDrawn = [];
+  };
+  
+  var _changeSeriesInterval = function (series, newInterval) {
+    var start = Date.parse(series[0][0]);
+    var end = Date.parse(series[series.length-1][0]);
+    var temp = start.clone();
+    var result = [];
+    while(temp <= end) {
+      result.push([temp.toString('yyyy-MM-ddTHH:mm'), null]);
+      temp = new Date(temp.getTime() + newInterval);
+    }
+    for(var i = 0, j = 0; i < series.length; i++) {
+      if(j >= result.length) { break; }
+      if(Date.compare(Date.parse(result[j][0]), Date.parse(series[i][0])) <= 0) {
+        result[j][1] = series[i][1];
+        j++;
+      }
+    }
+    return result;
   };
   
   var _init = function() {
@@ -894,35 +918,32 @@ var gpxUI = (function(gpxUI) {
       } else if (data == null) {
         $('#gpx_links-container').remove();
       }
-      //for(var i = 0; i < data.length; i++) {
-      //  var HTML = $('<a href="#" onClick="gpxUI.loadGPX(\'' + data[i].link + '\');">' + data[i].link + '</a><br>');
-      //  $("#gpx_links-container").append(HTML);
-      //}
-      var start, end = ""
+      var start = "", end = ""
       if(typeof data.startDate != 'undefined') {
-        start = Common.parseUTCToLocalTime(data.startDate.data).toString('hh:mm');
+        start = Common.parseUTCToLocalTime(data.startDate.data).toString('HH:mm');
       }
       if(typeof data.endDate != 'undefined') {
-        end = Common.parseUTCToLocalTime(data.endDate.data).toString('hh:mm');
+        end = Common.parseUTCToLocalTime(data.endDate.data).toString('HH:mm');
       }
       var HTML = $('<span style="float:left; font-weight:bold; width: 80px;">' 
         + start + '-' + end + '</span>'
         + '<span style="float:right; width:220px"><a href="#" onClick="gpxUI.loadGPX(\'' 
-        + data.gpxdata.link + '\');">' + data.gpxdata.sportType + '</a></span><br>');
+        + data.gpxdata.link + '\');">Sport type - ' + data.gpxdata.sportType + '</a></span><br>');
       $("#gpx_links-container").append(HTML);      
     });
     
     amplify.subscribe('gpx_show_map', function(data) {
-      //var HTML = $('<div id="map" style="width: 200px; height: 100px;"></div>');
-      //$("#gpx_events-container").append(HTML);
-      
+      var gpx = data.data;
+      var link = data.link;
       var maxWidth = window.innerWidth * 0.8;
       var maxHeight = window.innerHeight * 0.8;
+      var chartHeight = 200;
       var template = "<div data-role='popup' class='ui-content mapPopup' style='min-width:" + maxWidth + "px; min-height:" + maxHeight + "px;'>" 
           + "<a href='#' data-role='button' data-theme='g' data-icon='delete' data-iconpos='notext' " 
           + " class='ui-btn-right closePopup'>Close</a> "
           + "<div id='gpx_metadata'></div>"
-          + "<div id='map' style='overflow:hidden; min-width:" + maxWidth + "px; min-height:" + maxHeight + "px;'></div></div>";
+          + "<div id='map' style='overflow:hidden; min-width:" + maxWidth + "px; min-height:" + (maxHeight - chartHeight) + "px;'></div>"
+          + "<div id='gpx_highcharts_container' style='height:200px;'></div></div>";
       
       var popupafterclose = undefined;
       popupafterclose = popupafterclose ? popupafterclose : function () {};
@@ -945,30 +966,159 @@ var gpxUI = (function(gpxUI) {
             mapTypeId: google.maps.MapTypeId.ROADMAP
           };
           var map = new google.maps.Map(document.getElementById("map"), mapOptions);
-          var parser = new GPXParser(data, map);
+          var parser = new GPXParser(gpx, map);
           parser.setTrackColour("#ff0000");     // Set the track line colour
           parser.setTrackWidth(5);              // Set the track line width
           parser.setMinTrackPointDelta(0.001);  // Set the minimum distance between track points
-          parser.centerAndZoom(data);
+          parser.centerAndZoom(gpx);
           parser.addTrackpointsToMap();         // Add the trackpoints
           parser.addWaypointsToMap();           // Add the waypoints
           
           // Let's try to get some more details out of the GPX file
-          var gpxJson = $.xml2json(data);
+          var gpxJson = $.xml2json(gpx);
           console.log('GPX as JSON', gpxJson);
           $('#gpx_metadata').empty();
           if(typeof gpxJson.metadata.name != undefined) {
             $('#gpx_metadata').text(gpxJson.metadata.name);
           }
           if(typeof gpxJson.trk.trkseg == 'object' && typeof gpxJson.trk.trkseg.trkpt == 'object') {
-            var result = [];
-            for(var i = 0; i < gpxJson.trk.trkseg.trkpt.length; i++) {
-              result.push([gpxJson.trk.trkseg.trkpt[i].time.split('.')[0], parseInt(gpxJson.trk.trkseg.trkpt[i].ele)]);
+            try {
+              var elevation = [];
+              var elevationOriginalTimes = [];
+              var speed = [];
+              var speedOriginalTimes = [];
+              var points = [];
+              for(var i = 0; i < gpxJson.trk.trkseg.trkpt.length; i++) {
+                var p = new google.maps.LatLng(parseFloat(gpxJson.trk.trkseg.trkpt[i].lat, 10), parseFloat(gpxJson.trk.trkseg.trkpt[i].lon, 10))
+                if(points.length > 0 && i > 0) {
+                  try{
+                    var distance = google.maps.geometry.spherical.computeDistanceBetween(points[points.length-1],p)
+                    var timediff = (Date.parse(gpxJson.trk.trkseg.trkpt[i].time) - Date.parse(gpxJson.trk.trkseg.trkpt[i-1].time)) / 1000;
+                    speed.push([gpxJson.trk.trkseg.trkpt[i].time, Math.round((distance / timediff) * 360)/100]);
+                    speedOriginalTimes.push([gpxJson.trk.trkseg.trkpt[i].time, Math.round((distance / timediff) * 360)/100]);
+                  } catch(err) {
+                    
+                  }
+                }
+                points.push(p);
+                if(isNaN(parseInt(gpxJson.trk.trkseg.trkpt[i].ele)) == false) {
+                  elevation.push([gpxJson.trk.trkseg.trkpt[i].time.split('.')[0], parseInt(gpxJson.trk.trkseg.trkpt[i].ele)]);
+                  elevationOriginalTimes.push([gpxJson.trk.trkseg.trkpt[i].time, parseInt(gpxJson.trk.trkseg.trkpt[i].ele)]);
+                }
+              }
+              if(elevation.length > 0) {
+                elevation = Common.changeTimelineToLocal(elevation);
+                elevation = _changeSeriesInterval(elevation, 1000 * 15);
+                speed = Common.changeTimelineToLocal(speed);
+                speed = _changeSeriesInterval(speed, 1000 * 15);
+                if(_gpxTrailsDrawn.indexOf(link) == -1) {
+                  amplify.publish('new_timeline_dataset',
+                    {'name':'Elevation','id':'ele','min':0,'unit':'m','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(elevation[0][0]),'data':elevation}
+                  );
+                  amplify.publish('new_timeline_dataset',
+                    {'name':'Speed','id':'speed','min':0,'unit':'km/h','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(speed[0][0]),'data':speed}
+                  );
+                  _gpxTrailsDrawn.push(link);
+                }
+                
+                for(var i = 0; i < elevationOriginalTimes.length; i++) {
+                  var d = Date.parse(elevationOriginalTimes[i][0]);
+                  var tzo = d.getTimezoneOffset();
+                  elevationOriginalTimes[i] = 
+                    [
+                      Date.UTC(
+                        d.getFullYear(), 
+                        d.getMonth(), 
+                        d.getDate(), 
+                        d.getHours(), 
+                        d.getMinutes() - (tzo), 
+                        d.getSeconds(), 
+                        d.getMilliseconds()
+                      ), 
+                      elevationOriginalTimes[i][1]
+                    ];
+                }
+                var chart = $('#gpx_highcharts_container').highcharts({
+                  chart: {
+                      type: 'spline',
+                      height: chartHeight
+                  },
+                  title: {
+                      text: 'Track elevation and speed'
+                  },
+                  xAxis: {
+                      type: 'datetime'
+                  },
+                  yAxis: {
+                      title: {
+                          text: 'Elevation (m)'
+                      },
+                      min: 0
+                  },
+                  tooltip: {
+                    formatter: function() {
+                      var s = '<b>' + Highcharts.dateFormat('%H:%M:%S', this.points[0].point.x) + '</b><br>';
+                      for(var i = 0; i < this.points.length; i++) {
+                        s += '<b>' + this.points[i].series.name + ':</b> ' + this.points[i].point.y + '<br>';
+                      }
+                      return s;
+                    },
+                    shared: true
+                  },
+                  plotOptions: {
+                      spline: {
+                          marker: {
+                              enabled: false
+                          }
+                      }
+                  },
+                  series: [{
+                    name: 'Elevation',
+                    unit: 'm',
+                    data: elevationOriginalTimes
+                  }]
+                });
+                if(speedOriginalTimes.length > 0) {
+                  for(var i = 0; i < speedOriginalTimes.length; i++) {
+                    var d = Date.parse(speedOriginalTimes[i][0]);
+                    var tzo = d.getTimezoneOffset();
+                    speedOriginalTimes[i] = 
+                      [
+                        Date.UTC(
+                          d.getFullYear(), 
+                          d.getMonth(), 
+                          d.getDate(), 
+                          d.getHours(), 
+                          d.getMinutes() - (tzo), 
+                          d.getSeconds(), 
+                          d.getMilliseconds()
+                        ), 
+                        speedOriginalTimes[i][1]
+                      ];
+                  }
+                  $('#gpx_highcharts_container').highcharts().addAxis({
+                    id: 'speed-axis',
+                    min: 0,
+                    showEmpty: true,
+                    title: {
+                      text: 'Speed (km/h)'
+                    }
+                  }, true, true);
+                  $('#gpx_highcharts_container').highcharts().addSeries({
+                    type: 'spline',
+                    yAxis: 'speed-axis',
+                    name: 'Speed',
+                    data: speedOriginalTimes,
+                    unit: 'km/h'
+                  }, true);
+                }
+              } else {
+                $('#gpx_highcharts_container').empty()
+                $('#map').height($('#map').height() + chartHeight)
+              }
+            } catch(err) {
+              console.log("ERROR, GPX parsing", err);
             }
-            // result = Common.changeTimelineToLocal(result);
-            //amplify.publish('new_timeline_dataset',
-            //  {'name':'Elevation','id':'ele','min':0,'unit':'m','visible':true,'type':'spline','pointInterval': 5 * 60 * 1000, 'pointStart': Date.parse(result[0][0]),'data':result}
-            //);
           }
         }
       });
@@ -2124,6 +2274,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			_currentday = _today.clone().addDays(-1);
     $('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
+    highchartsUI.resetZoom();
 		_refreshData();
 	};
 
@@ -2263,6 +2414,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
 		_refreshData();
+    highchartsUI.resetZoom();
 	};
 
 	var _nextDay = function() {
@@ -2270,6 +2422,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		$('#datescroller').mobiscroll('setDate', _currentday, true);
 		_disableNextDayButton();
 		_refreshData();
+    highchartsUI.resetZoom();
 	};
 
 	return {
