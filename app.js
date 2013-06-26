@@ -554,8 +554,8 @@ var ganttUI = (function(ganttUI) {
             title: {
                 text: null
             },
-                minPadding: 0.2,
-                maxPadding: 0.2
+            minPadding: 0.2,
+            maxPadding: 0.2
         },
         legend: {
             enabled: false
@@ -628,7 +628,7 @@ var ganttUI = (function(ganttUI) {
                   commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
                 }
               }
-            } 
+            }
         };
         $.each(task.intervals, function(j, interval) {
             item.data.push({
@@ -684,11 +684,13 @@ var ganttUI = (function(ganttUI) {
     _series = _series.concat(newItem);
     for(var i = 0; i < newItem.length; i++) {
       _chart.addSeries(newItem[i], true);
+      //_chart.yAxis.max = _series.length + 0.5;
       _chart.redraw();
 		}
   }
-  var _init = function() {
-    amplify.subscribe('new_gantt_chart', function(data) {
+  var _init = function(parentDIV) {
+    _parentDIV = parentDIV;
+    amplify.subscribe('new_gantt_chart-' + _parentDIV, function(data) {
       console.log("new_gantt_chart", data);
       if(typeof(_chart) == 'undefined') {
         $('#' + _parentDIV).css({"display":"block"});
@@ -705,7 +707,9 @@ var ganttUI = (function(ganttUI) {
     init: _init,
     clear: _clearGraph
   }
-}());
+});
+
+
 
 var bulletSparkUI = (function(bulletSparkUI) {
 	var _init = function() {
@@ -872,6 +876,20 @@ var gpxUI = (function(gpxUI) {
   var _gpxTrailsDrawn = [];  
   
   var _loadGPX = function(link) {
+    // Trying to use IE to make the call but no avail
+    if ('XDomainRequest' in window && window.XDomainRequest !== null) {
+     
+      // override default jQuery transport
+      //jQuery.ajaxSettings.xhr = function() {
+      //    try { return new XDomainRequest(); }
+      //    catch(e) { }
+      //};
+      
+      IE8_ajax_fix();
+     
+      // also, override the support check
+      jQuery.support.cors = true;
+    }
     $.ajax(
       {
         url: _baseURL + link.substring(1),
@@ -925,11 +943,33 @@ var gpxUI = (function(gpxUI) {
       if(typeof data.endDate != 'undefined') {
         end = Common.parseUTCToLocalTime(data.endDate.data).toString('HH:mm');
       }
+      var sportType = typeof data.sportType !== 'undefined' ? data.sportType.data : "unknown";
       var HTML = $('<span style="float:left; font-weight:bold; width: 80px;">' 
         + start + '-' + end + '</span>'
         + '<span style="float:right; width:220px"><a href="#" onClick="gpxUI.loadGPX(\'' 
-        + data.gpxdata.link + '\');">Sport type - ' + data.gpxdata.sportType + '</a></span><br>');
-      $("#gpx_links-container").append(HTML);      
+        + data.gpxdata.link + '\');">Sport type - ' + sportType + '</a></span><br>');
+      $("#gpx_links-container").append(HTML);
+      
+      if(typeof data.startDate != 'undefined' && typeof data.endDate != 'undefined') {
+        var d1 = Common.parseUTCToLocalTime(data.startDate.data);
+        var d2 = Common.parseUTCToLocalTime(data.endDate.data);
+        var interval = d2.getTime() - d1.getTime();
+        var row = [
+          { from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()), 
+            to:   Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()) + interval, 
+            label: sportType }
+        ];
+        var rows = {
+          id: 'trail_' + data.gpxdata.link,
+          tasks: [
+            {
+              name: 'Trail ' + d1.toString('HH:mm'),
+              intervals: row
+            }
+          ]
+        };
+        amplify.publish('new_gantt_chart-gantt', rows);          
+      }
     });
     
     amplify.subscribe('gpx_show_map', function(data) {
@@ -1011,14 +1051,18 @@ var gpxUI = (function(gpxUI) {
                 elevation = _changeSeriesInterval(elevation, 1000 * 15);
                 speed = Common.changeTimelineToLocal(speed);
                 speed = _changeSeriesInterval(speed, 1000 * 15);
-                if(_gpxTrailsDrawn.indexOf(link) == -1) {
+                
+                var timeStr = Date.parse(elevation[0][0]).toString('HH:mm');
+                
+                // See if this has been already added (matching start time), if not, add it to the main timeline
+                if(_gpxTrailsDrawn.indexOf(gpxJson.trk.trkseg.trkpt[0].time) == -1) {
                   amplify.publish('new_timeline_dataset',
-                    {'name':'Elevation','id':'ele','min':0,'unit':'m','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(elevation[0][0]),'data':elevation}
+                    {'name':'Elevation (' + timeStr + ')','id':'ele-' + timeStr,'min':0,'unit':'m','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(elevation[0][0]),'data':elevation}
                   );
                   amplify.publish('new_timeline_dataset',
-                    {'name':'Speed','id':'speed','min':0,'unit':'km/h','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(speed[0][0]),'data':speed}
+                    {'name':'Speed (' + timeStr + ')','id':'speed-' + timeStr,'min':0,'unit':'km/h','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(speed[0][0]),'data':speed}
                   );
-                  _gpxTrailsDrawn.push(link);
+                  _gpxTrailsDrawn.push(gpxJson.trk.trkseg.trkpt[0].time);
                 }
                 
                 for(var i = 0; i < elevationOriginalTimes.length; i++) {
@@ -1138,6 +1182,10 @@ var gpxUI = (function(gpxUI) {
   };
   
   var _handleFiles = function(files) {
+    if(location.protocol == "http:") {
+      console.log("Wellmu accepts POST only from HTTPS origins, not HTTP.");
+      return;
+    }
     for(var i = 0; i < files.length; i++) {
       var file = files[i];
       var xhr = new XMLHttpRequest();
@@ -1271,7 +1319,7 @@ var calendarUI = (function(calendarUI) {
             }
           ]
         };
-        amplify.publish('new_gantt_chart', data);        
+        amplify.publish('new_gantt_chart-gantt', data);        
       } else {
         var HTML = $(
           '<tr><td class="cal_empty">No events today!</td></tr>'
@@ -1578,7 +1626,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         id: 'gantt_sleep_stages',
         tasks: stages
       };
-      amplify.publish('new_gantt_chart', sleepStageData);
+      amplify.publish('new_gantt_chart-gantt', sleepStageData);
     }
 	};
 
@@ -1865,6 +1913,20 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 	var _getData = function(apicall, done_cb, async) {
     async = typeof async !== 'undefined' ? async : 'true';
 		var myurl = baseurl + apicall;
+    // Trying to use IE to make the call but no avail
+    if ('XDomainRequest' in window && window.XDomainRequest !== null) {
+     
+      // override default jQuery transport
+      //jQuery.ajaxSettings.xhr = function() {
+      //    try { return new XDomainRequest(); }
+      //    catch(e) { }
+      //};
+      
+      IE8_ajax_fix();
+     
+      // also, override the support check
+      jQuery.support.cors = true;
+    }
 		$.ajax(
 			{
 				url: myurl,
@@ -2102,9 +2164,11 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         var json = data;
       
       gpxUI.clear();
-      if(json[0].gpx.length > 0) {
-        for(var i = 0; i < json[0].gpx.length; i++) {
-          amplify.publish('gpx_available', json[0].gpx[i]);
+      if(typeof json[0].gpx != 'undefined') {
+        if(json[0].gpx.length > 0) {
+          for(var i = 0; i < json[0].gpx.length; i++) {
+            amplify.publish('gpx_available', json[0].gpx[i]);
+          }
         }
       }
 
@@ -2139,7 +2203,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               }
             ]
           };
-          amplify.publish('new_gantt_chart', data);
+          amplify.publish('new_gantt_chart-gantt', data);
         }
 			} else {
 				console.log("No activities data available on " + daypath, json);
@@ -2292,6 +2356,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			$( "#login-btn" ).button( "disable" );
 	};
 
+  var _ganttUI = ganttUI();
 	var _today = Date.today();
 	var _init = function(date) {
     console.log('Initializing single day view', date, gup('date'));
@@ -2359,7 +2424,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			highchartsUI.init(options);
 			highchartsUI.clear();
 			
-			ganttUI.init();
+			_ganttUI.init('gantt');
 			
 			analysisUI.init();
 			_getAnalysisData();
@@ -2376,7 +2441,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
 		if(userData.fitbit || userData.beddit) {
       highchartsUI.clear();
-      ganttUI.clear();
+      _ganttUI.clear();
       _getAnalysisData();
       _getSleepData();
 		}
@@ -2443,6 +2508,20 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			// First we check the services available for the user
 			var apicall = 'user/services';
 			var myurl = baseurl + apicall;
+      // Trying to use IE to make the call but no avail
+      if ('XDomainRequest' in window && window.XDomainRequest !== null) {
+       
+        // override default jQuery transport
+        //jQuery.ajaxSettings.xhr = function() {
+        //    try { return new XDomainRequest(); }
+        //    catch(e) { }
+        //};
+        
+        IE8_ajax_fix();
+       
+        // also, override the support check
+        jQuery.support.cors = true;
+      }
 			$.ajax(
 				{
 					url: myurl,
@@ -2508,6 +2587,20 @@ var wellnessAPI =(function(wellnessAPI) {
 
 	var _getData = function(apicall, cb) {
 		var myurl = baseurl + apicall;
+    // Trying to use IE to make the call but no avail
+    if ('XDomainRequest' in window && window.XDomainRequest !== null) {
+     
+      // override default jQuery transport
+      //jQuery.ajaxSettings.xhr = function() {
+      //    try { return new XDomainRequest(); }
+      //    catch(e) { }
+      //};
+      
+      IE8_ajax_fix();
+     
+      // also, override the support check
+      jQuery.support.cors = true;
+    }
 		$.ajax(
 			{
 				url: myurl,
@@ -2524,11 +2617,14 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _today = Date.today();
 	var _currentday;
 	var _chart;
-	
+  
+	var _ganttChart = ganttUI();
+  _ganttChart.init('gantt_longer_view');
+  
 	var _daypath = function(date) {
     return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + (date.getDate()) + '/';
 	};
-	
+  
 	var _createSeries = function(container) {
     $(container).highcharts(
     {
@@ -2583,7 +2679,7 @@ var wellnessAPI =(function(wellnessAPI) {
         }
       },
       xAxis: {
-        type: 'datetime'
+        type: 'datetime',
       },
       yAxis: [
         {
@@ -2723,7 +2819,10 @@ var wellnessAPI =(function(wellnessAPI) {
     $('#select-choice-2').selectmenu("refresh", true);
 	};
 	
-	var _populateChart = function() {		
+	var _populateChart = function() {
+    var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    _ganttChart.clear();
+        
     // Sleep
 		if(userData.fitbit || userData.beddit) {
       _getData('data/' + userData.username + '/merge/sleep/' + _daypath(_currentday) + 'days/' + _period + '', function(data) {
@@ -2737,10 +2836,48 @@ var wellnessAPI =(function(wellnessAPI) {
           minutesAsleep: [], 
           minutesAwake: [],
           minutesToFallAsleep: [], 
-          efficiency: [] 
+          efficiency: [],
+          sleepIntervals: []
         };
+        
         for(var i = 0; i < json.length; i++) {
           var current = json[i].common;
+          var day = Date.parse(json[i].date);
+          
+          // Parse data for Gantt graph
+          try {
+            if(typeof current != 'undefined' && day != null) {
+              var intoBed = Date.parse(current.timeToBed.data);
+              var tzOffset = -1 * intoBed.getTimezoneOffset() * 60 * 1000;
+              var fromBed = Date.parse(current.timeOutOfBed.data);
+              var sleepLength = fromBed - intoBed;
+              var row = [
+                { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + tzOffset, 
+                  to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength + tzOffset, 
+                  label: "" }
+              ];
+              var lw = 6;
+            } else {
+              var lw = 0;
+              var row = [];
+            }
+            var weekday = weekdays[day.getDay()];
+            var rows = {
+              id: 'sleep_duration_' + i,
+              tasks: [
+                {
+                  name: 'Sleep ' + day.toString('yyyy-MM-dd') + ' (' + weekday + ')',
+                  intervals: row,
+                  lineWidth: lw
+                }
+              ]
+            };
+            amplify.publish('new_gantt_chart-gantt_longer_view', rows);           
+          } catch(err) {
+            console.log('ERROR: Sleep data, gantt long view', err);
+          }
+          
+          // Parse data for timeline
           try {
             var day = Date.parse(current.date.data);
             if(day != null) {
@@ -2751,7 +2888,7 @@ var wellnessAPI =(function(wellnessAPI) {
               series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep.data) == false ? current.minutesToFallAsleep.data : null]);
             }
           } catch(err) {
-            // console.log(err);
+            console.log('ERROR: Sleep data, long view', err);
           }
         }
         if(series.minutesAwake.length > 0)
@@ -2762,6 +2899,7 @@ var wellnessAPI =(function(wellnessAPI) {
           _addAxisAndSeries('efficiency', 'Sleep efficiency', series.efficiency, true);
         if(series.minutesToFallAsleep.length > 0)
           _addAxisAndSeries('minutesToFallAsleep', 'Min. to fall asleep', series.minutesToFallAsleep);
+
        
         _chart.redraw();
       });
@@ -2990,15 +3128,6 @@ var wellnessAPI =(function(wellnessAPI) {
      
       // also, override the support check
       jQuery.support.cors = true;
-
-
-      if (Function.prototype.bind && window.console && typeof console.log == "object"){
-          [
-            "log","info","warn","error","assert","dir","clear","profile","profileEnd"
-          ].forEach(function (method) {
-              console[method] = this.bind(console[method], console);
-          }, Function.prototype.call);
-      }
     }
     
     $.ajax(
@@ -3504,4 +3633,61 @@ function IE8_ajax_fix() {
 			};
 		}
 	});
+}
+
+
+/**
+ * Protect window.console method calls, e.g. console is not defined on IE
+ * unless dev tools are open, and IE doesn't define console.debug
+ */
+(function() {
+  if (!window.console) {
+    window.console = {};
+  }
+  // union of Chrome, FF, IE, and Safari console methods
+  var m = [
+    "log", "info", "warn", "error", "debug", "trace", "dir", "group",
+    "groupCollapsed", "groupEnd", "time", "timeEnd", "profile", "profileEnd",
+    "dirxml", "assert", "count", "markTimeline", "timeStamp", "clear"
+  ];
+  // define undefined methods as noops to prevent errors
+  for (var i = 0; i < m.length; i++) {
+    if (!window.console[m[i]]) {
+      window.console[m[i]] = function() {};
+    }    
+  } 
+})();
+
+if (!Array.prototype.indexOf) {
+  Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
+    "use strict";
+    if (this == null) {
+      throw new TypeError();
+    }
+    var t = Object(this);
+    var len = t.length >>> 0;
+
+    if (len === 0) {
+      return -1;
+    }
+    var n = 0;
+    if (arguments.length > 1) {
+      n = Number(arguments[1]);
+      if (n != n) { // shortcut for verifying if it's NaN
+        n = 0;
+      } else if (n != 0 && n != Infinity && n != -Infinity) {
+        n = (n > 0 || -1) * Math.floor(Math.abs(n));
+      }
+    }
+    if (n >= len) {
+      return -1;
+    }
+    var k = n >= 0 ? n : Math.max(len - Math.abs(n), 0);
+    for (; k < len; k++) {
+      if (k in t && t[k] === searchElement) {
+        return k;
+      }
+    }
+    return -1;
+  }
 }

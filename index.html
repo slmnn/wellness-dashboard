@@ -58,7 +58,8 @@
 					maxDate: today,
 					onSelect: function(dateText, instance) { 
 						wellnessAPISingleDay.setDate($('#datescroller').mobiscroll('getDate'));
-						event.stopPropagation();
+            if(event.stopPropagation)
+              event.stopPropagation();
 						return instance;
 					}
 				});
@@ -75,7 +76,8 @@
               startDate = Date.today().add({days: (wellnessAPI.getPeriod() * -1)});
             }
 						wellnessAPI.init(startDate);
-						event.stopPropagation();
+            if(event.stopPropagation)
+              event.stopPropagation();
 						return instance;
 					}
 				});
@@ -184,6 +186,7 @@
         </div><!-- /grid-b -->
 
         <div id="highcharts" class="show-after-init"></div>
+        <div id="gantt_longer_view" class="show-after-init"></div>
       
       </div>
     </div>
@@ -220,6 +223,17 @@
         </div>
       </div>   
     </div>
+    
+    <!-- please use a modern browser -->
+    <script type="text/javascript" src="./lib/detect.min.js"></script>
+    <script type="text/javascript">
+        //delete this variable for defaults
+        this.detectOptions = { 
+        versions: {i:8,f:3.6,c:15,o:10.6,s:4,n:10}, //Set versions. Letter is first letter of browser name
+        url: 'http://browser-update.org/%s/update.html', //url for the link. %s resolves to language code.
+        debug: false //set to true to always see bar
+    };  
+    </script>
 
     <!-- Google Analytics -->
     <script type="text/javascript">
