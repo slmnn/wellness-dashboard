@@ -169,38 +169,43 @@ commonTooltipUI = (function(commonTooltipUI) {
     charts.push($(container).highcharts());
     $(charts).each(function(i, el){
         $(el.container).mouseleave(function(){
+          try {
             for(i=0; i < charts.length; i++) {
               charts[i].tooltip.hide();
-            }        
+            }
+          }catch(err) {}
         });
     });
 	};
   _syncTooltip = function (container, p) {
     var i=0, j=0, k=0, data;
-    for(i=0; i < charts.length; i++) {
-      if(container.id != charts[i].container.id){
-        for(k=0; k < charts[i].series.length; k++) {
-          data = charts[i].series[k].data;
-          for(j=0; j<data.length; j++) {
-            if (data[j].x === p) {
-
-              charts[i].tooltip.refresh( charts[i].series[k].data[j] );
-              // charts[i].series[k].tooltipOptions.formatter = formatter;
-              return;
+    try {
+      for(i=0; i < charts.length; i++) {
+        if(container.id != charts[i].container.id){
+          for(k=0; k < charts[i].series.length; k++) {
+            data = charts[i].series[k].data;
+            for(j=0; j<data.length; j++) {
+              if (data[j].x === p) {
+                charts[i].tooltip.refresh( charts[i].series[k].data[j] );
+                // charts[i].series[k].tooltipOptions.formatter = formatter;
+                return;
+              }
             }
           }
-        }
-        charts[i].tooltip.hide();
-      } else {
-        for(k=0; k < charts[i].series.length; k++) {
-          data = charts[i].series[k].data;
-          for(j=0; j<data.length; j++) {
-            if (data[j].x === p) {
-              charts[i].tooltip.refresh( charts[i].series[k].data[j] );
+          charts[i].tooltip.hide();
+        } else {
+          for(k=0; k < charts[i].series.length; k++) {
+            data = charts[i].series[k].data;
+            for(j=0; j<data.length; j++) {
+              if (data[j].x === p) {
+                charts[i].tooltip.refresh( charts[i].series[k].data[j] );
+              }
             }
           }
         }
       }
+    } catch(err) {
+    
     }
   };
   return {
@@ -511,7 +516,7 @@ var ganttUI = (function(ganttUI) {
   var _series, _tasks, _chart;
   var _clearGraph = function() {
     if(typeof(_chart) == 'object') {
-      console.log('Removing gantt', _chart.series.length);
+      // console.log('Removing gantt', _chart.series.length);
       for (var i = 0; i < _chart.series.length; i++) {
         _chart.series[i].remove(true); //forces the chart to redraw
       }
@@ -525,20 +530,42 @@ var ganttUI = (function(ganttUI) {
       _series = []; 
       _tasks = [];
     }
+    $('#' + _parentDIV).empty();
+    _chart = undefined;
   };
-  var _createGraph = function() {
+  var _createGraph = function(colors, height) {
+    if(!height) var height = null;
+    if(!colors) {
+      colors = [
+         '#2f7ed8', 
+         '#0d233a', 
+         '#8bbc21', 
+         '#910000', 
+         '#1aadce', 
+         '#492970',
+         '#f28f43', 
+         '#77a1e5', 
+         '#c42525', 
+         '#a6c96a'
+      ]
+    }
     // create the chart
     _chart = new Highcharts.Chart({
         chart: {
             width: $(window).width()-40,
+            height: height,
             renderTo: _parentDIV,
             type: 'line'
         },
+        colors: colors,
         title: {
             text: null
         },
         xAxis: {
-            type: 'datetime'
+            type: 'datetime',
+            dateTimeLabelFormats: {
+                day: '%H:%M'
+            }
         },
         yAxis: {
             tickInterval: 1,
@@ -567,23 +594,25 @@ var ganttUI = (function(ganttUI) {
               if(typeof(this.point.label) != 'undefined') {
                 label = this.point.label;
               }
-              var result = "<table>";
-              var allSeries = this.series.chart.series.reverse();
-              for(var i = 0; i < allSeries.length; i++) {
-                for(var k = 0; k < allSeries[i].points.length; k++) {
-                  if(allSeries[i].points[k].options.from <= this.x && allSeries[i].points[k].options.to >= this.x && allSeries[i].points[k].y !== null) {
-                    result += '<tr><td><b>'+ allSeries[i].name + '</b></td><td>' +
-                      Highcharts.dateFormat('%H:%M', allSeries[i].points[k].options.from)  +
-                      ' - ' + Highcharts.dateFormat('%H:%M', allSeries[i].points[k].options.to) + '</td>';
-                    if(this.series._i === allSeries[i]._i)
-                      result += '<td>' + label + '</td></tr>';
-                    else 
-                      result += '<td></td></tr>';
-                    break;
-                  }
-                } 
-              }
-              result += '</table>';
+              try {
+                var result = "<table>";
+                var allSeries = this.series.chart.series.reverse();
+                for(var i = 0; i < allSeries.length; i++) {
+                  for(var k = 0; k < allSeries[i].points.length; k++) {
+                    if(allSeries[i].points[k].options.from <= this.x && allSeries[i].points[k].options.to >= this.x && allSeries[i].points[k].y !== null) {
+                      result += '<tr><td><b>'+ allSeries[i].name + '</b></td><td>' +
+                        Highcharts.dateFormat('%H:%M', allSeries[i].points[k].options.from)  +
+                        ' - ' + Highcharts.dateFormat('%H:%M', allSeries[i].points[k].options.to) + '</td>';
+                      if(this.series._i === allSeries[i]._i)
+                        result += '<td>' + label + '</td></tr>';
+                      else 
+                        result += '<td></td></tr>';
+                      break;
+                    }
+                  } 
+                }
+                result += '</table>';
+              } catch(err) { console.log('Gantt UI tooltip', err) }
               return result;
             },
             crosshairs: {
@@ -596,6 +625,7 @@ var ganttUI = (function(ganttUI) {
             line: {
                 lineWidth: 9,
                 marker: {
+                    symbol: 'triangle',
                     enabled: false
                 },
                 dataLabels: {
@@ -617,23 +647,33 @@ var ganttUI = (function(ganttUI) {
     var offset = 0;
     if(typeof(_chart) != 'undefined')
       offset = _chart.series.length;
-    console.log("offset", offset);
+    // console.log("offset", offset);
     $.each(tasks, function(i, task) {
+        if(!task.color) task.color = null;
         var item = {
             name: task.name,
             data: [],
+            color: task.color,
             point: {
               events: {
                 mouseOver: function(){
-                  commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
+                  try{
+                    commonTooltipUI.syncTooltip(this.series.chart.container, this.x);
+                  } catch(err) {console.log("Common tooltip error in GanttUI", err);}
                 }
               }
             }
         };
         $.each(task.intervals, function(j, interval) {
+            if(!interval.color) interval.color = null;
+            if(!interval.startMarkerEnabled) interval.startMarkerEnabled = false;
             item.data.push({
                 x: interval.from,
                 y: i + offset,
+                marker: {
+                    enabled: interval.startMarkerEnabled,
+                    fillColor: interval.color
+                },
                 label: interval.label,
                 from: interval.from,
                 to: interval.to
@@ -674,7 +714,7 @@ var ganttUI = (function(ganttUI) {
               //);
             }
         });
-        series.push(item); 
+        series.push(item);
     });
     return series;
   };
@@ -684,19 +724,18 @@ var ganttUI = (function(ganttUI) {
     _series = _series.concat(newItem);
     for(var i = 0; i < newItem.length; i++) {
       _chart.addSeries(newItem[i], true);
-      //_chart.yAxis.max = _series.length + 0.5;
       _chart.redraw();
 		}
   }
   var _init = function(parentDIV) {
     _parentDIV = parentDIV;
     amplify.subscribe('new_gantt_chart-' + _parentDIV, function(data) {
-      console.log("new_gantt_chart", data);
+      // console.log("new_gantt_chart", data);
       if(typeof(_chart) == 'undefined') {
         $('#' + _parentDIV).css({"display":"block"});
         _tasks = data.tasks;
         _series = _createSeries(data.tasks);
-        _createGraph();
+        _createGraph(data.colors, data.height);
         // var milestones = _createMilestones(data.milestones);
       } else {
         _appendToSeries(data.tasks);
@@ -2805,6 +2844,10 @@ var wellnessAPI =(function(wellnessAPI) {
 	var _setPeriod = function(newPeriod) {
     _period = newPeriod;
     _destroyChart();
+    var lastDayOfPeriod = _currentday.add({days:_period});
+    if(Date.compare(_today, lastDayOfPeriod) < 0) {
+      $('#datescroller-periodstart').mobiscroll('setDate', _today.clone().add({days: -1 * _period}), true);
+    }
     _init(Date.parse($('#datescroller-periodstart').mobiscroll('getDate')));
 	}
 	
@@ -2831,6 +2874,79 @@ var wellnessAPI =(function(wellnessAPI) {
           var json = $.parseJSON(data);
         else 
           var json = data;
+          
+        for(var i = 0; i < json.length; i++) {
+          var current = json[i].common;
+          var day = Date.parse(json[i].date);
+          
+          // Parse data for Gantt graph
+          if(_period < 14) {
+            try {
+              if(typeof current != 'undefined' && day != null) {
+                var intoBed = Date.parse(current.timeToBed.data);
+                var tzOffset = -1 * intoBed.getTimezoneOffset() * 60 * 1000;
+                var fromBed = Date.parse(current.timeOutOfBed.data);
+                var sleepLength = fromBed - intoBed;
+                var row = [
+                  { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + tzOffset, 
+                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes() + current.minutesToFallAsleep.data) + tzOffset, 
+                    label: "",
+                    color: '#FF0033',
+                    startMarkerEnabled: false
+                  },
+                  { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes() + current.minutesToFallAsleep.data) + tzOffset, 
+                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep.data - current.minutesAfterWakeup.data + tzOffset, 
+                    label: "Sleep begins",
+                    color: '#33FF99',
+                    startMarkerEnabled: true
+                  }
+                ];
+                if(current.minutesAfterWakeup.data > 0) {
+                  row.push({ from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep.data - current.minutesAfterWakeup.data + tzOffset, 
+                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep.data + current.minutesAfterWakeup.data + tzOffset, 
+                    label: "",
+                    color: '#FF0099',
+                    startMarkerEnabled: true
+                  });
+                }
+              } else {
+                console.log("No sleep data", day);
+                var row = [];
+              }
+              var weekday = weekdays[day.getDay()];
+              var rows = {
+                id: 'sleep_duration_' + i,
+                height: 300,
+                // colors: ['#3399FF'],
+                tasks: [
+                  {
+                    color: "#3399FF",
+                    name: 'Sleep ' + day.toString('yyyy-MM-dd') + ' (' + weekday + ')',
+                    intervals: row
+                  }
+                ]
+              };
+              if(typeof current != 'undefined') {
+                if(current.minutesAsleep.data < 420) { rows.tasks[0].color = "#FFFF00" } 
+                else if(current.minutesAsleep.data < 360) { rows.tasks[0].color = "#FF6600" } 
+                else if(current.minutesAsleep.data < 300) { rows.tasks[0].color = "#FF0000" } 
+              }
+              amplify.publish('new_gantt_chart-gantt_longer_view', rows);           
+            } catch(err) {
+              console.log('ERROR: Sleep data, gantt long view', err);
+            }
+          } else {
+            $('#gantt_longer_view').text("Sleep rythm chart is available only for 7 day periods.");
+          }
+        }
+      });
+    
+      _getData('data/' + userData.username + '/merge/sleep/' + _daypath(_currentday) + 'days/' + _period + '', function(data) {
+
+        if(typeof(data) != 'object')
+          var json = $.parseJSON(data);
+        else 
+          var json = data;
         
         var series = { 
           minutesAsleep: [], 
@@ -2841,44 +2957,9 @@ var wellnessAPI =(function(wellnessAPI) {
         };
         
         for(var i = 0; i < json.length; i++) {
-          var current = json[i].common;
-          var day = Date.parse(json[i].date);
-          
-          // Parse data for Gantt graph
-          try {
-            if(typeof current != 'undefined' && day != null) {
-              var intoBed = Date.parse(current.timeToBed.data);
-              var tzOffset = -1 * intoBed.getTimezoneOffset() * 60 * 1000;
-              var fromBed = Date.parse(current.timeOutOfBed.data);
-              var sleepLength = fromBed - intoBed;
-              var row = [
-                { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + tzOffset, 
-                  to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength + tzOffset, 
-                  label: "" }
-              ];
-              var lw = 6;
-            } else {
-              var lw = 0;
-              var row = [];
-            }
-            var weekday = weekdays[day.getDay()];
-            var rows = {
-              id: 'sleep_duration_' + i,
-              tasks: [
-                {
-                  name: 'Sleep ' + day.toString('yyyy-MM-dd') + ' (' + weekday + ')',
-                  intervals: row,
-                  lineWidth: lw
-                }
-              ]
-            };
-            amplify.publish('new_gantt_chart-gantt_longer_view', rows);           
-          } catch(err) {
-            console.log('ERROR: Sleep data, gantt long view', err);
-          }
-          
           // Parse data for timeline
           try {
+            var current = json[i].common;
             var day = Date.parse(current.date.data);
             if(day != null) {
               var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
