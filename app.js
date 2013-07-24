@@ -40,6 +40,27 @@ var Common = (function(Common) {
         }
       }
       return arr;
+    },
+    changeTimelineToUTCPresentation:function(arr) {
+      for(var i = 0; i < arr.length; i++) {
+        if(arr[i] != null) {
+          var d = Date.parse(arr[i][0])
+          if(d != null)
+            arr[i][0] = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+          else 
+            arr[i][0] = null;
+        } else {
+          continue;
+        }
+      }
+      return arr;
+    },
+    showHourglass : function() {
+      //$('body').append('<div id="hourglass_visible" class="waiting"></div>');
+      $('body').append('<div id="hourglass_visible" style="position: absolute; top: 40px; left: 5px;">Loading...</div>');
+    },
+    hideHourglass : function() {
+      $('#hourglass_visible').remove();
     }
   };
 }());
@@ -74,6 +95,7 @@ var userData = (function(userData) {
 
 var gaugeUI = (function(gaugeUI) {
   var _createGauge = function(targetDIVid, options, sourcedata) {
+    $('#gauge-no_measures').remove();
     var gauge = $('#gauge_' + options.id).highcharts();
     if(typeof(gauge) == 'undefined') {
       var HTML = $('<div class="gauge-wrapper"><span class="gaugetext">' + options.name + '</span></br><div id="gauge_' + options.id + '" class="gauge"></div></div>');
@@ -142,8 +164,16 @@ var gaugeUI = (function(gaugeUI) {
       for(var i = 0; i < gauge.series.length; i++) {
         var point = gauge.series[i].points[0];
         point.update(0);
+        point.update(0);
       }
     });
+    
+    // Actually, lets remove them all
+    $( ".gauge" ).each(function( index ) {
+      $(this).highcharts().destroy();
+    });
+    $('#gauge-container').empty();
+    $('#gauge-container').append($('<div class="table-wrapper" id="gauge-no_measures"><p><b>No measures today!</b></p></div>'));
   }
   var _init = function() {
     var targetDivID = tabUI.newTab('Measures');
@@ -989,14 +1019,16 @@ var gpxUI = (function(gpxUI) {
     var temp = start.clone();
     var result = [];
     while(temp <= end) {
-      result.push([temp.toString('yyyy-MM-ddTHH:mm'), null]);
+      result.push([temp.toString('yyyy-MM-ddTHH:mm:ss'), null]);
       temp = new Date(temp.getTime() + newInterval);
     }
-    for(var i = 0, j = 0; i < series.length; i++) {
-      if(j >= result.length) { break; }
-      if(Date.compare(Date.parse(result[j][0]), Date.parse(series[i][0])) <= 0) {
-        result[j][1] = series[i][1];
+    for(var i = 0, j = 0; i < result.length; i++) {
+      if(j >= series.length) { break; }
+      if(Date.compare(Date.parse(result[i][0]), Date.parse(series[j][0])) >= 0) {
+        result[i][1] = series[j][1];
         j++;
+      } else {
+        result[i][1] = null;
       }
     }
     return result;
@@ -1096,29 +1128,42 @@ var gpxUI = (function(gpxUI) {
           if(typeof gpxJson.metadata.name != undefined) {
             $('#gpx_metadata').text(gpxJson.metadata.name);
           }
-          if(typeof gpxJson.trk.trkseg == 'object' && typeof gpxJson.trk.trkseg.trkpt == 'object') {
+          if(typeof gpxJson.trk.trkseg == 'object') {
             try {
               var elevation = [];
               var elevationOriginalTimes = [];
               var speed = [];
               var speedOriginalTimes = [];
               var points = [];
-              for(var i = 0; i < gpxJson.trk.trkseg.trkpt.length; i++) {
-                var p = new google.maps.LatLng(parseFloat(gpxJson.trk.trkseg.trkpt[i].lat, 10), parseFloat(gpxJson.trk.trkseg.trkpt[i].lon, 10))
+              
+              var trkpt = []
+              if(gpxJson.trk.trkseg.length) {
+                for(var i = 0; i < gpxJson.trk.trkseg.length; i++) {
+                  trkpt = trkpt.concat(gpxJson.trk.trkseg[i].trkpt);
+                }
+              } else {
+                trkpt = gpxJson.trk.trkseg.trkpt;
+              }
+              
+              for(var i = 0; i < trkpt.length; i++) {
+                var p = new google.maps.LatLng(parseFloat(trkpt[i].lat, 10), parseFloat(trkpt[i].lon, 10))
                 if(points.length > 0 && i > 0) {
                   try{
                     var distance = google.maps.geometry.spherical.computeDistanceBetween(points[points.length-1],p)
-                    var timediff = (Date.parse(gpxJson.trk.trkseg.trkpt[i].time) - Date.parse(gpxJson.trk.trkseg.trkpt[i-1].time)) / 1000;
-                    speed.push([gpxJson.trk.trkseg.trkpt[i].time, Math.round((distance / timediff) * 360)/100]);
-                    speedOriginalTimes.push([gpxJson.trk.trkseg.trkpt[i].time, Math.round((distance / timediff) * 360)/100]);
+                    var timediff = (Date.parse(trkpt[i].time) - Date.parse(trkpt[i-1].time)) / 1000;
+                    var pointSpeed = Math.round((distance / timediff) * 360)/100;
+                    if(!isNaN(pointSpeed) && pointSpeed != "Infinity") {
+                      speed.push([trkpt[i].time, pointSpeed]);
+                      speedOriginalTimes.push([trkpt[i].time, pointSpeed]);
+                    }
                   } catch(err) {
                     
                   }
                 }
                 points.push(p);
-                if(isNaN(parseInt(gpxJson.trk.trkseg.trkpt[i].ele)) == false) {
-                  elevation.push([gpxJson.trk.trkseg.trkpt[i].time.split('.')[0], parseInt(gpxJson.trk.trkseg.trkpt[i].ele)]);
-                  elevationOriginalTimes.push([gpxJson.trk.trkseg.trkpt[i].time, parseInt(gpxJson.trk.trkseg.trkpt[i].ele)]);
+                if(isNaN(parseInt(trkpt[i].ele)) == false) {
+                  elevation.push([trkpt[i].time.split('.')[0], parseInt(trkpt[i].ele)]);
+                  elevationOriginalTimes.push([trkpt[i].time, parseInt(trkpt[i].ele)]);
                 }
               }
               if(elevation.length > 0) {
@@ -1130,14 +1175,14 @@ var gpxUI = (function(gpxUI) {
                 var timeStr = Date.parse(elevation[0][0]).toString('HH:mm');
                 
                 // See if this has been already added (matching start time), if not, add it to the main timeline
-                if(_gpxTrailsDrawn.indexOf(gpxJson.trk.trkseg.trkpt[0].time) == -1) {
+                if(_gpxTrailsDrawn.indexOf(trkpt[0].time) == -1) {
                   amplify.publish('new_timeline_dataset',
                     {'name':'Elevation (' + timeStr + ')','id':'ele-' + timeStr,'min':0,'unit':'m','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(elevation[0][0]),'data':elevation}
                   );
                   amplify.publish('new_timeline_dataset',
                     {'name':'Speed (' + timeStr + ')','id':'speed-' + timeStr,'min':0,'unit':'km/h','visible':true,'type':'spline','pointInterval': 1000 * 15, 'pointStart': Date.parse(speed[0][0]),'data':speed}
                   );
-                  _gpxTrailsDrawn.push(gpxJson.trk.trkseg.trkpt[0].time);
+                  _gpxTrailsDrawn.push(trkpt[0].time);
                 }
                 
                 for(var i = 0; i < elevationOriginalTimes.length; i++) {
@@ -1477,8 +1522,6 @@ var weatherAPI = (function(weatherAPI) {
 	}
 }());
 
-
-
 var wellnessAPISingleDay = (function(wellnessAPISingleDay) {  
 	var baseurl = Common.determineBaseURL();
   var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];  
@@ -1710,6 +1753,22 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       var json = $.parseJSON(data);
     else 
       var json = data;
+    
+    // See if there is no withings data available
+    if(
+       typeof json[0].withings == 'undefined') {
+      amplify.publish('gauges_to_zero');
+      return;
+    }
+    if(
+       typeof json[0].withings.weight == 'undefined' &&
+       typeof json[0].withings.diasPressure == 'undefined' &&
+       typeof json[0].withings.sysPressure == 'undefined' &&
+       typeof json[0].withings.pulse == 'undefined') {
+      amplify.publish('gauges_to_zero');
+      return;
+    }
+    
     try {
       if(json[0].withings.weight != undefined) {
         var value = Math.round(json[0].withings.weight[0].data.value * 10) / 10;
@@ -1778,6 +1837,8 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             }
           };
         amplify.publish('new_gauge', gaugesettings);
+      } else {
+        $('#gauge_weight').parent().remove();
       }
     }
 		catch(err) {
@@ -1918,6 +1979,8 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             }
           };
         amplify.publish('new_gauge', gaugesettings);
+      } else {
+        $('#gauge_sysp').parent().remove();
       }
     }
 		catch(err) {
@@ -1940,7 +2003,6 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               'minorTickLength': 3,
               'minorTickPosition': 'inside',
               'minorTickColor': '#666',
-      
               'tickPixelInterval': 30,
               'tickWidth': 2,
               'tickPosition': 'inside',
@@ -1978,8 +2040,10 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             }
           };
         amplify.publish('new_gauge', gaugesettings);
+      } else {
+        $('#gauge_pulse').parent().remove();
       }
-    }
+    } 
 		catch(err) {
 			console.log("There is no Withings pulse available", json);
 		}
@@ -2016,9 +2080,10 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           404: function() {
             console.log("404" + myurl);
           }
-				}
+				},
+        beforeSend: Common.showHourglass
 			}
-		).done(done_cb);
+		).done(done_cb).complete(Common.hideHourglass);
 	};
   
   var _getGPX = function() {
@@ -2524,7 +2589,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		}
     
 		if(userData.withings) {
-      amplify.publish('gauges_to_zero');
+      // amplify.publish('gauges_to_zero');
 			_getWeightData();
 		}
 
@@ -2686,9 +2751,10 @@ var wellnessAPI =(function(wellnessAPI) {
         contentType: "application/json; charset=utf-8",
 	    	headers: {
 	        "Authorization": userData.credentials
-   			}
+   			},
+        beforeSend: Common.showHourglass
 			}
-		).done(cb);
+		).done(cb).complete(Common.hideHourglass);
 	};
 
 	var _today = Date.today();
