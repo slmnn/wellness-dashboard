@@ -159,21 +159,22 @@ var gaugeUI = (function(gaugeUI) {
     }
   };
   var _setAllToZero = function() {
-    $( ".gauge" ).each(function( index ) {
-      var gauge = $(this).highcharts();
-      for(var i = 0; i < gauge.series.length; i++) {
-        var point = gauge.series[i].points[0];
-        point.update(0);
-        point.update(0);
-      }
-    });
-    
+    //$( ".gauge" ).each(function( index ) {
+    //  var gauge = $(this).highcharts();
+    //  for(var i = 0; i < gauge.series.length; i++) {
+    //    var point = gauge.series[i].points[0];
+    //    point.update(0);
+    //    point.update(0);
+    //  }
+    //});
+    //
     // Actually, lets remove them all
     $( ".gauge" ).each(function( index ) {
       $(this).highcharts().destroy();
     });
     $('#gauge-container').empty();
     $('#gauge-container').append($('<div class="table-wrapper" id="gauge-no_measures"><p><b>No measures today!</b></p></div>'));
+    console.log('Removed all gauges');
   }
   var _init = function() {
     var targetDivID = tabUI.newTab('Measures');
@@ -1045,12 +1046,12 @@ var gpxUI = (function(gpxUI) {
       }
       var start = "", end = ""
       if(typeof data.startDate != 'undefined') {
-        start = Common.parseUTCToLocalTime(data.startDate.data).toString('HH:mm');
+        start = Common.parseUTCToLocalTime(data.startDate).toString('HH:mm');
       }
       if(typeof data.endDate != 'undefined') {
-        end = Common.parseUTCToLocalTime(data.endDate.data).toString('HH:mm');
+        end = Common.parseUTCToLocalTime(data.endDate).toString('HH:mm');
       }
-      var sportType = typeof data.sportType !== 'undefined' ? data.sportType.data : "unknown";
+      var sportType = typeof data.sportType !== 'undefined' ? data.sportType : "unknown";
       var HTML = $('<span style="float:left; font-weight:bold; width: 80px;">' 
         + start + '-' + end + '</span>'
         + '<span style="float:right; width:220px"><a href="#" onClick="gpxUI.loadGPX(\'' 
@@ -1058,8 +1059,8 @@ var gpxUI = (function(gpxUI) {
       $("#gpx_links-container").append(HTML);
       
       if(typeof data.startDate != 'undefined' && typeof data.endDate != 'undefined') {
-        var d1 = Common.parseUTCToLocalTime(data.startDate.data);
-        var d2 = Common.parseUTCToLocalTime(data.endDate.data);
+        var d1 = Common.parseUTCToLocalTime(data.startDate);
+        var d2 = Common.parseUTCToLocalTime(data.endDate);
         var interval = d2.getTime() - d1.getTime();
         var row = [
           { from: Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate(), d1.getHours(), d1.getMinutes()), 
@@ -1556,28 +1557,28 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         var common = json[i].common;
         if(common == null) continue;
         if(common.source == null) continue;
-        var daynumber = Date.parse(common.date.data).getDay();       
+        var daynumber = Date.parse(common.date).getDay();       
         // $('.sleep_variables').width(((i + 1) * $('.sleep_variables').width()) + 'px');
         $('#sleep_variables-container').append(
           '<div class="sleep_variables table-wrapper" id="sleep_variables-' + i + '">' +
           '<table class="sleepdata_table" id="sleepdata_table_' + i + '">' +
           '<caption><b>Sleep variables (' + weekdays[daynumber] + ')</b></caption>' +
-          '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency.data * 100) / 100 + '</td><td class="sleepdata_unit">%</td><td></td></tr>' +
-          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString((common.minutesAsleep.data + common.minutesAwake.data) * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">&nbsp;</span></td></tr>' +
-          '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep.data * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
-          '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake.data * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
-          '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep.data) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
-          '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount.data + '</td><td class="sleepdata_unit">times</td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Sleep efficiency</td><td class="sleepdata_value">' + Math.round(common.efficiency * 100) / 100 + '</td><td class="sleepdata_unit">%</td><td></td></tr>' +
+          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString((common.minutesAsleep + common.minutesAwake) * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_sleeping_sparkline_' + i + '">&nbsp;</span></td></tr>' +
+          '<tr><td class="sleepdata_name">Total sleep time</td><td class="sleepdata_value">' + secondsToString(common.minutesAsleep * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Time awake in bed</td><td class="sleepdata_value">' + secondsToString(common.minutesAwake * 60) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Time to fall asleep</td><td class="sleepdata_value">' + secondsToString(common.minutesToFallAsleep) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"></td></tr>' +
+          '<tr><td class="sleepdata_name">Awakenings count</td><td class="sleepdata_value">' + common.awakeningsCount + '</td><td class="sleepdata_unit">times</td><td class="sleepdata_sparkline"></td></tr>' +
           '</table></div>'
         );
-        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(common.minutesAsleep.data / 60 * 100) / 100],[Math.round(common.minutesAwake.data / 60 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(common.minutesAsleep / 60 * 100) / 100],[Math.round(common.minutesAwake / 60 * 100) / 100]], {'type': 'pie', 'width':'10px'});
         $.sparkline_display_visible();
       }
       
       if(json[i].fitbit != null) {
         var fitbit = json[i].fitbit;
-        if(fitbit.minuteData.data != null) {
-          var data = fitbit.minuteData.data;
+        if(fitbit.minuteData != null) {
+          var data = fitbit.minuteData;
           // Push one bogus stage to the end. Parser needs to see change in stage
           // value to make a push to the array.
           data.push(['0000-00-00T00:00:00Z', 'X']);
@@ -1628,12 +1629,12 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           console.log('Invalid Beddit analysis on ' + _currentday.toDateString(), beddit);
           continue;
         } else {
-          console.log('Valid Beddit analysis available on ' + beddit.date.data, beddit);
+          console.log('Valid Beddit analysis available on ' + beddit.date, beddit);
 
         }
         // Push one bogus stage to the end. Parser needs to see change in stage
         // value to make a push to the array.
-        var data = beddit.sleep_stages.data;
+        var data = beddit.sleep_stages;
         data.push(['0000-00-00T00:00:00', 'X']);
         var j = 0;
         var stageDur = 0;
@@ -1681,14 +1682,14 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           // Implement parseStages function that gives an array of intervals
         } 						
         $('#sleepdata_table_' + i).append(
-          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep.data) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
-          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep.data) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Deep sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_deep_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_deep_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
+          '<tr><td class="sleepdata_name">Light sleep time</td><td class="sleepdata_value">' + secondsToString(beddit.time_light_sleep) + '</td><td class="sleepdata_unit"></td><!--<td class="sleepdata_sparkline"><span id="sleep_time_light_sparkline_' + i + '">&nbsp;</span></td>--></tr>' +
 //          '<tr><td class="sleepdata_name">Time in bed</td><td class="sleepdata_value">' + secondsToString(beddit.time_in_bed) + '</td><td class="sleepdata_unit"></td><td class="sleepdata_sparkline"><span id="sleep_time_in_bed_sparkline_' + i + '">&nbsp;</span></td></tr>' +
-          '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(beddit.resting_heartrate.data*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
-          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent.data + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">&nbsp;</span></td>--></tr>'
+          '<tr><td class="sleepdata_name">Resting heartrate</td><td class="sleepdata_value">' + Math.round(beddit.resting_heartrate*100)/100 + '</td><td class="sleepdata_unit">bpm</td></tr>' +
+          '<tr><td class="sleepdata_name">Stress percent</td><td class="sleepdata_value">' + beddit.stress_percent + '</td><td class="sleepdata_unit">%</td><!--<td class="sleepdata_sparkline"><span id="sleep_stress_sparkline_' + i + '">&nbsp;</span></td>--></tr>'
         );
       
-        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(beddit.time_sleeping.data/3600 * 100) / 100],[Math.round(beddit.time_deep_sleep.data/3600 * 100) / 100],[ Math.round(beddit.time_light_sleep.data/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
+        $('#sleep_time_sleeping_sparkline_' + i).sparkline([[ Math.round(beddit.time_sleeping/3600 * 100) / 100],[Math.round(beddit.time_deep_sleep/3600 * 100) / 100],[ Math.round(beddit.time_light_sleep/3600 * 100) / 100]], {'type': 'pie', 'width':'10px'});
 //        $('#sleep_time_in_bed_sparkline_' + i).sparkline([ Math.round(beddit.time_in_bed/3600 * 100) / 100, Math.round((beddit.time_in_bed-beddit.time_sleeping)/3600 * 100) / 100], {'type': 'pie', width:'10px'});	  
         
         if(noise.length > 0) {
@@ -1704,10 +1705,10 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             pulse.push(null);
           }
         }
-        noise = noise.concat(beddit.noise_measurements.data);
-        luminosity = luminosity.concat(beddit.luminosity_measurements.data);
-        actigram = actigram.concat(beddit.minutely_actigram.data);
-        pulse = pulse.concat(beddit.averaged_heart_rate_curve.data);
+        noise = noise.concat(beddit.noise_measurements);
+        luminosity = luminosity.concat(beddit.luminosity_measurements);
+        actigram = actigram.concat(beddit.minutely_actigram);
+        pulse = pulse.concat(beddit.averaged_heart_rate_curve);
       }
 		}
 		
@@ -1755,106 +1756,26 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       var json = data;
     
     // See if there is no withings data available
+    amplify.publish('gauges_to_zero');
     if(
-       typeof json[0].withings == 'undefined') {
-      amplify.publish('gauges_to_zero');
-      return;
-    }
-    if(
-       typeof json[0].withings.weight == 'undefined' &&
-       typeof json[0].withings.diasPressure == 'undefined' &&
-       typeof json[0].withings.sysPressure == 'undefined' &&
-       typeof json[0].withings.pulse == 'undefined') {
-      amplify.publish('gauges_to_zero');
+      typeof json[0].withings == 'undefined') {
       return;
     }
     
-    try {
-      if(json[0].withings.weight != undefined) {
-        var value = Math.round(json[0].withings.weight[0].data.value * 10) / 10;
-        var gaugesettings = 
-          {'targetDIVid':'#gauge-container',
-           'data':{'value':value,'valueSuffix':' kg'}, 
-           'options':{
-              'id':'weight',
-              'name':'Weight','min':0,'max':value*1.4,
-          'yAxis': [{
-              'min': 0,
-              'max': value*1.4,
-              
-              'minorTickInterval': 'auto',
-              'minorTickWidth': 1,
-              'minorTickLength': 3,
-              'minorTickPosition': 'inside',
-              'minorTickColor': '#666',
-      
-              'tickPixelInterval': 30,
-              'tickWidth': 2,
-              'tickPosition': 'inside',
-              'tickLength': 4,
-              'tickColor': '#666',
-              'labels': {
-                  'step': 2,
-                  'rotation': 'auto',
-                  'enabled': false
-              },
-              'title': {
-                  'text': 'kg',
-                  'margin': 0,
-                  'style': { 'fontSize': '9px' }
-              },
-              'plotBands': [{    
-                              'from': 0,
-                              'to': value*1.1,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#55BF3B' // green
-                          }, {
-                              'from': value*1.1,
-                              'to': value*1.2,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#DDDF0D' // yellow
-                          }, {
-                              'from': value*1.2,
-                              'to': value*1.4,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#DF5353' // red
-                          }]
-          }],
-              'series': [{
-                'name': 'Weight',
-                'data': [value],
-                'dataLabels': {
-                  'borderWidth': 0,
-                  'style': { 'fontSize': '9px' }
-                },
-                'tooltip': {
-                    'valueSuffix': ' kg'
-                }
-               }]    
-            }
-          };
-        amplify.publish('new_gauge', gaugesettings);
-      } else {
-        $('#gauge_weight').parent().remove();
-      }
-    }
-		catch(err) {
-			console.log("There is no Withings weight data available", json);
-		}
-    try {
-      if(json[0].withings.diasPressure != undefined 
-        && json[0].withings.sysPressure != undefined) {
-        value = Math.round(json[0].withings.sysPressure[0].data.value * 10) / 10;
-        var gaugesettings = 
-          {'targetDIVid':'#gauge-container',
-           'data':{'value':value,'valueSuffix':' mmHg'}, 
-           'options':{'id':'sysp','name':'DBP/SBP','min':0,'max':180,
+    for(var i = 0; i < json[0].withings.length; i++) {
+      var t = Common.parseUTCToLocalTime(json[0].withings[i].date).toString('HH:mm');
+      try {
+        if(typeof json[0].withings[i].weight != 'undefined') {
+          var value = Math.round(json[0].withings[i].weight * 10) / 10;
+          var gaugesettings = 
+            {'targetDIVid':'#gauge-container',
+             'data':{'value':value,'valueSuffix':' kg'}, 
+             'options':{
+                'id':'weight_' + i,
+                'name':'Weight (' + t + ')','min':0,'max':value*1.4,
             'yAxis': [{
                 'min': 0,
-                'max': 180,
+                'max': value*1.4,
                 
                 'minorTickInterval': 'auto',
                 'minorTickWidth': 1,
@@ -1868,185 +1789,260 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
                 'tickLength': 4,
                 'tickColor': '#666',
                 'labels': {
+                    'step': 2,
+                    'rotation': 'auto',
                     'enabled': false
                 },
                 'title': {
-                    'text': 'mmHg',
+                    'text': 'kg',
                     'margin': 0,
                     'style': { 'fontSize': '9px' }
                 },
                 'plotBands': [{    
-                              'from': 0,
-                              'to': 90,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#DDDF0D' // yellow
-                          },
-                          {    
-                              'from': 90,
-                              'to': 120,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#55BF3B' // green
-                          }, {
-                              'from': 120,
-                              'to': 140,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#DDDF0D' // yellow
-                          }, {
-                              'from': 140,
-                              'to': 180,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#DF5353' // red
-                          }]
-            },{
+                                'from': 0,
+                                'to': value*1.1,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#55BF3B' // green
+                            }, {
+                                'from': value*1.1,
+                                'to': value*1.2,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#DDDF0D' // yellow
+                            }, {
+                                'from': value*1.2,
+                                'to': value*1.4,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#DF5353' // red
+                            }]
+            }],
+                'series': [{
+                  'name': 'Weight',
+                  'data': [value],
+                  'dataLabels': {
+                    'borderWidth': 0,
+                    'style': { 'fontSize': '9px' }
+                  },
+                  'tooltip': {
+                      'valueSuffix': ' kg'
+                  }
+                 }]    
+              }
+            };
+          amplify.publish('new_gauge', gaugesettings);
+        } else {
+          $('#gauge_weight').parent().remove();
+        }
+      }
+      catch(err) {
+        console.log("There is no Withings weight data available", json);
+      }
+      try {
+        if(typeof json[0].withings[i].diasPressure != 'undefined' 
+          && json[0].withings[i].sysPressure != 'undefined') {
+          value = Math.round(json[0].withings[i].sysPressure * 10) / 10;
+          var gaugesettings = 
+            {'targetDIVid':'#gauge-container',
+             'data':{'value':value,'valueSuffix':' mmHg'}, 
+             'options':{'id':'sysp_' + i,'name':'DBP/SBP (' + t + ')','min':0,'max':180,
+              'yAxis': [{
+                  'min': 0,
+                  'max': 180,
+                  
+                  'minorTickInterval': 'auto',
+                  'minorTickWidth': 1,
+                  'minorTickLength': 3,
+                  'minorTickPosition': 'inside',
+                  'minorTickColor': '#666',
+          
+                  'tickPixelInterval': 30,
+                  'tickWidth': 2,
+                  'tickPosition': 'inside',
+                  'tickLength': 4,
+                  'tickColor': '#666',
+                  'labels': {
+                      'enabled': false
+                  },
+                  'title': {
+                      'text': 'mmHg',
+                      'margin': 0,
+                      'style': { 'fontSize': '9px' }
+                  },
+                  'plotBands': [{    
+                                'from': 0,
+                                'to': 90,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#DDDF0D' // yellow
+                            },
+                            {    
+                                'from': 90,
+                                'to': 120,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#55BF3B' // green
+                            }, {
+                                'from': 120,
+                                'to': 140,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#DDDF0D' // yellow
+                            }, {
+                                'from': 140,
+                                'to': 180,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#DF5353' // red
+                            }]
+              },{
+                  'min': 0,
+                  'max': 180,
+                  
+                  'minorTickInterval': 'auto',
+                  'minorTickWidth': 1,
+                  'minorTickLength': 3,
+                  'minorTickPosition': 'inside',
+                  'minorTickColor': '#666',
+          
+                  //'radius': '80%',
+                  'offset': -7,
+          
+                  'tickPixelInterval': 30,
+                  'tickWidth': 2,
+                  'tickPosition': 'inside',
+                  'tickLength': 4,
+                  'tickColor': '#666',
+                  'labels': {
+                      'enabled': false
+                  },
+                  'plotBands': [{    
+                                'from': 0,
+                                'to': 60,
+                                'innerRadius': '80%',
+                                'outerRadius': '85%',
+                                'color': '#DDDF0D' // yellow
+                            },
+                            {    
+                                'from': 60,
+                                'to': 80,
+                                'innerRadius': '80%',
+                                'outerRadius': '85%',
+                                'color': '#55BF3B' // green
+                            }, {
+                                'from': 80,
+                                'to': 100, 
+                                'innerRadius': '80%',
+                                'outerRadius': '85%',
+                                'color': '#DDDF0D' // yellow
+                            }, {
+                                'from': 100,
+                                'to': 180,
+                                'innerRadius': '80%',
+                                'outerRadius': '85%',
+                                'color': '#DF5353' // red
+                            }]
+              }],
+                'series': [{
+                  'name': 'SPB',
+                  'data': [value],
+                  'dial': { 'radius' : '90%', 'borderWidth': 1, 'backgroundColor': 'brown', 'borderColor': 'black' },
+                  'tooltip': {
+                      'valueSuffix': 'mmHg'
+                  },
+                  'dataLabels': {
+                    'borderWidth': 0,
+                    'style': { 'fontSize': '9px' },
+                    'formatter' : function() {
+                        return this.series.chart.series[1].data[0].y + '/' + this.series.chart.series[0].data[0].y;
+                      }
+                  }
+                 },{
+                  'name': 'DPB',
+                  'yAxis': 1,
+                  'data': [Math.round(json[0].withings[i].diasPressure * 10) / 10],
+                  'dial': { 'radius' : '76%', 'borderWidth': 1, 'backgroundColor': 'blue', 'borderColor': 'black'  },
+                  'tooltip': {
+                      'valueSuffix': 'mmHg'
+                  },
+                  'dataLabels': {
+                    'enabled': false,
+                    'formatter' : function() { return false; }
+                  }
+                 }]        
+              }
+            };
+          amplify.publish('new_gauge', gaugesettings);
+        } else {
+          $('#gauge_sysp').parent().remove();
+        }
+      }
+      catch(err) {
+        console.log("There is no Withings systolic / diastolic pressure available", json);
+      }
+
+      try {
+        if(typeof json[0].withings[i].pulse != 'undefined') {    
+          value = Math.round(json[0].withings[i].pulse * 10) / 10;
+          var gaugesettings = 
+            {'targetDIVid':'#gauge-container',
+             'data':{'value':value,'valueSuffix':' bpm'}, 
+             'options':{'id':'pulse_' + i,'name':'Pulse (' + t + ')' ,'min':0,'max':160, 
+                     'yAxis': [{
                 'min': 0,
-                'max': 180,
+                'max': value*1.4,
                 
                 'minorTickInterval': 'auto',
                 'minorTickWidth': 1,
                 'minorTickLength': 3,
                 'minorTickPosition': 'inside',
                 'minorTickColor': '#666',
-        
-                //'radius': '80%',
-                'offset': -7,
-        
                 'tickPixelInterval': 30,
                 'tickWidth': 2,
                 'tickPosition': 'inside',
                 'tickLength': 4,
                 'tickColor': '#666',
                 'labels': {
+                    'step': 2,
+                    'rotation': 'auto',
                     'enabled': false
                 },
+                'title': {
+                    'text': 'pbm',
+                    'margin': 0,
+                    'style': { 'fontSize': '9px' }
+                },
                 'plotBands': [{    
-                              'from': 0,
-                              'to': 60,
-                              'innerRadius': '80%',
-                              'outerRadius': '85%',
-                              'color': '#DDDF0D' // yellow
-                          },
-                          {    
-                              'from': 60,
-                              'to': 80,
-                              'innerRadius': '80%',
-                              'outerRadius': '85%',
-                              'color': '#55BF3B' // green
-                          }, {
-                              'from': 80,
-                              'to': 100, 
-                              'innerRadius': '80%',
-                              'outerRadius': '85%',
-                              'color': '#DDDF0D' // yellow
-                          }, {
-                              'from': 100,
-                              'to': 180,
-                              'innerRadius': '80%',
-                              'outerRadius': '85%',
-                              'color': '#DF5353' // red
-                          }]
+                                'from': 0,
+                                'to': 160,
+                                'innerRadius': '96%',
+                                'outerRadius': '100%',
+                                'color': '#0099FF' // blue
+                            }]
             }],
-              'series': [{
-                'name': 'SPB',
-                'data': [value],
-                'dial': { 'radius' : '90%', 'borderWidth': 1, 'backgroundColor': 'brown', 'borderColor': 'black' },
-                'tooltip': {
-                    'valueSuffix': 'mmHg'
-                },
-                'dataLabels': {
-                  'borderWidth': 0,
-                  'style': { 'fontSize': '9px' },
-                  'formatter' : function() {
-                      return this.series.chart.series[1].data[0].y + '/' + this.series.chart.series[0].data[0].y;
-                    }
-                }
-               },{
-                'name': 'DPB',
-                'yAxis': 1,
-                'data': [Math.round(json[0].withings.diasPressure[0].data.value * 10) / 10],
-                'dial': { 'radius' : '76%', 'borderWidth': 1, 'backgroundColor': 'blue', 'borderColor': 'black'  },
-                'tooltip': {
-                    'valueSuffix': 'mmHg'
-                },
-                'dataLabels': {
-                  'enabled': false,
-                  'formatter' : function() { return false; }
-                }
-               }]        
-            }
-          };
-        amplify.publish('new_gauge', gaugesettings);
-      } else {
-        $('#gauge_sysp').parent().remove();
+                'series': [{
+                  'name': 'Pulse',
+                  'data': [value],
+                  'dataLabels': {
+                    'borderWidth': 0,
+                    'style': { 'fontSize': '9px' }
+                  },
+                  'tooltip': {
+                      'valueSuffix': ' bpm'
+                  }
+                 }]          
+              }
+            };
+          amplify.publish('new_gauge', gaugesettings);
+        } else {
+          $('#gauge_pulse').parent().remove();
+        }
+      } 
+      catch(err) {
+        console.log("There is no Withings pulse available", json);
       }
     }
-		catch(err) {
-			console.log("There is no Withings systolic / diastolic pressure available", json);
-		}
-
-    try {
-      if(json[0].withings.pulse != undefined) {    
-        value = Math.round(json[0].withings.pulse[0].data.value * 10) / 10;
-        var gaugesettings = 
-          {'targetDIVid':'#gauge-container',
-           'data':{'value':value,'valueSuffix':' bpm'}, 
-           'options':{'id':'pulse','name':'Pulse','min':0,'max':160, 
-                   'yAxis': [{
-              'min': 0,
-              'max': value*1.4,
-              
-              'minorTickInterval': 'auto',
-              'minorTickWidth': 1,
-              'minorTickLength': 3,
-              'minorTickPosition': 'inside',
-              'minorTickColor': '#666',
-              'tickPixelInterval': 30,
-              'tickWidth': 2,
-              'tickPosition': 'inside',
-              'tickLength': 4,
-              'tickColor': '#666',
-              'labels': {
-                  'step': 2,
-                  'rotation': 'auto',
-                  'enabled': false
-              },
-              'title': {
-                  'text': 'pbm',
-                  'margin': 0,
-                  'style': { 'fontSize': '9px' }
-              },
-              'plotBands': [{    
-                              'from': 0,
-                              'to': 160,
-                              'innerRadius': '96%',
-                              'outerRadius': '100%',
-                              'color': '#0099FF' // blue
-                          }]
-          }],
-              'series': [{
-                'name': 'Pulse',
-                'data': [value],
-                'dataLabels': {
-                  'borderWidth': 0,
-                  'style': { 'fontSize': '9px' }
-                },
-                'tooltip': {
-                    'valueSuffix': ' bpm'
-                }
-               }]          
-            }
-          };
-        amplify.publish('new_gauge', gaugesettings);
-      } else {
-        $('#gauge_pulse').parent().remove();
-      }
-    } 
-		catch(err) {
-			console.log("There is no Withings pulse available", json);
-		}
 	};
 
 	var _getData = function(apicall, done_cb, async) {
@@ -2081,7 +2077,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
             console.log("404" + myurl);
           }
 				},
-        beforeSend: Common.showHourglass
+        beforeSend: Common.showHourglass 
 			}
 		).done(done_cb).complete(Common.hideHourglass);
 	};
@@ -2320,8 +2316,8 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 				var month = activityDay.getMonth();
 				var day = activityDay.getDate();
 				var result = [];
-				for(var i = 0; i < json[0].fitbit.activities.data.length; i++) {
-          var a = json[0].fitbit.activities.data[i];
+				for(var i = 0; i < json[0].fitbit.activities.length; i++) {
+          var a = json[0].fitbit.activities[i];
           var hour = parseInt(a.startTime.split(':')[0]);
           var minute = parseInt(a.startTime.split(':')[1]);
           var durMS = parseInt(a.duration);
@@ -2333,7 +2329,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
               label: a.name.substring(0,15) + '...'
             }
           );
-          var activityTimeStamp = json[0].date.split('T')[0] + 'T' + json[0].fitbit.activities.data[i].startTime;
+          var activityTimeStamp = json[0].date.split('T')[0] + 'T' + json[0].fitbit.activities[i].startTime;
         }
         if(result.length > 0) {
           var data = {
@@ -2368,42 +2364,40 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
       // If everything fails, we use fake goals data
       else {
         goals = {
-          data : {
-            caloriesOut: 2500,
-            steps: 10000,
-            floors: 10,
-            activeScore: 1000
-          }
+          caloriesOut: 2500,
+          steps: 10000,
+          floors: 10,
+          activeScore: 1000
         }
       }
 			if(typeof json[0].fitbit != 'undefined' && typeof json[0].fitbit.summary != 'undefined') {
-        goal = (goals.data.caloriesOut);
-        value = (json[0].fitbit.summary.data.activityCalories);
+        goal = (goals.caloriesOut);
+        value = (json[0].fitbit.summary.activityCalories);
         var burnedcaloriesdata = {"title":"Calories burned","subtitle":"","ranges":[Math.round(goal*0.44),Math.round(goal*0.75),Math.round(goal*0.95)],"measures":[value],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'burnedcalories', 'chart': burnedcaloriesdata }
         );
         var goal, value;
-        goal = (goals.data.steps);
-        value = (json[0].fitbit.summary.data.steps);
+        goal = (goals.steps);
+        value = (json[0].fitbit.summary.steps);
         var stepsdata = {"title":"Steps taken","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'steps', 'chart': stepsdata}
         );
-        goal = (goals.data.floors);
-        value = (json[0].fitbit.summary.data.floors);
+        goal = (goals.floors);
+        value = (json[0].fitbit.summary.floors);
         var floorsdata = {"title":"Floors climbed","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'floors', 'chart': floorsdata}
         );
-        goal = (goals.data.activeScore);
-        value = (json[0].fitbit.summary.data.activeScore);
+        goal = (goals.activeScore);
+        value = (json[0].fitbit.summary.activeScore);
         var activityscoredata = {"title":"Activity score","subtitle":"","ranges":[Math.round(goal*0.35),Math.round(goal*0.65),Math.round(goal*0.85)],"measures":[value, goal],"markers":[goal],"valuetxt":value};
         amplify.publish('bullet_chart', 
           { 'id':'activityscore', 'chart': activityscoredata}
         );
         
-        var d = json[0].fitbit.summary.data.distances;
+        var d = json[0].fitbit.summary.distances;
         var dValues = [];
         var dNames = [];
         for(var j = 0; j < d.length; j++) {
@@ -2434,7 +2428,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
           }
         );
         
-        var s = json[0].fitbit.summary.data;
+        var s = json[0].fitbit.summary;
         amplify.publish('activity_piechart', 
           { 
             'id':'activityminutes', 
@@ -2451,7 +2445,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 			}
 			if(typeof json[0].fitbit != 'undefined' && typeof json[0].fitbit.stepsMinuteData != 'undefined') {
         // Check if data is just linked
-        if(json[0].fitbit.stepsMinuteData.data == null && typeof json[0].fitbit.stepsMinuteData.link != 'undefined') {
+        if(typeof json[0].fitbit.stepsMinuteData.link != 'undefined') {
           // Get the linked data (omit the first slash in the URL)
           _getData(json[0].fitbit.stepsMinuteData.link.substring(1), function(data) {
             var mySteps = [];
@@ -2882,7 +2876,7 @@ var wellnessAPI =(function(wellnessAPI) {
 	};
 	
 	var _addAxisAndSeries = function(seriesId, seriesName, seriesData, seriesVisible) {
-    seriesVisible = typeof seriesVisible !== 'undefined' ? seriesVisible : false;
+    seriesVisible = typeof seriesVisible !== 'undefined' ? seriesVisible : true;
     _chart.addAxis({
       id: seriesId,
   //    min: 0,
@@ -2987,27 +2981,27 @@ var wellnessAPI =(function(wellnessAPI) {
           if(_period < 14) {
             try {
               if(typeof current != 'undefined' && day != null) {
-                var intoBed = Date.parse(current.timeToBed.data);
+                var intoBed = Date.parse(current.timeToBed);
                 var tzOffset = -1 * intoBed.getTimezoneOffset() * 60 * 1000;
-                var fromBed = Date.parse(current.timeOutOfBed.data);
+                var fromBed = Date.parse(current.timeOutOfBed);
                 var sleepLength = fromBed - intoBed;
                 var row = [
                   { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + tzOffset, 
-                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes() + current.minutesToFallAsleep.data) + tzOffset, 
+                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes() + current.minutesToFallAsleep) + tzOffset, 
                     label: "",
                     color: '#FF0033',
                     startMarkerEnabled: false
                   },
-                  { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes() + current.minutesToFallAsleep.data) + tzOffset, 
-                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep.data - current.minutesAfterWakeup.data + tzOffset, 
+                  { from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes() + current.minutesToFallAsleep) + tzOffset, 
+                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep - current.minutesAfterWakeup + tzOffset, 
                     label: "Sleep begins",
                     color: '#33FF99',
                     startMarkerEnabled: true
                   }
                 ];
-                if(current.minutesAfterWakeup.data > 0) {
-                  row.push({ from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep.data - current.minutesAfterWakeup.data + tzOffset, 
-                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep.data + current.minutesAfterWakeup.data + tzOffset, 
+                if(current.minutesAfterWakeup > 0) {
+                  row.push({ from: Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep - current.minutesAfterWakeup + tzOffset, 
+                    to:   Date.UTC(0, 0, 0, intoBed.getHours(), intoBed.getMinutes()) + sleepLength - current.minutesToFallAsleep + current.minutesAfterWakeup + tzOffset, 
                     label: "",
                     color: '#FF0099',
                     startMarkerEnabled: true
@@ -3031,9 +3025,9 @@ var wellnessAPI =(function(wellnessAPI) {
                 ]
               };
               if(typeof current != 'undefined') {
-                if(current.minutesAsleep.data < 420) { rows.tasks[0].color = "#FFFF00" } 
-                else if(current.minutesAsleep.data < 360) { rows.tasks[0].color = "#FF6600" } 
-                else if(current.minutesAsleep.data < 300) { rows.tasks[0].color = "#FF0000" } 
+                if(current.minutesAsleep < 420) { rows.tasks[0].color = "#FFFF00" } 
+                else if(current.minutesAsleep < 360) { rows.tasks[0].color = "#FF6600" } 
+                else if(current.minutesAsleep < 300) { rows.tasks[0].color = "#FF0000" } 
               }
               amplify.publish('new_gantt_chart-gantt_longer_view', rows);           
             } catch(err) {
@@ -3064,13 +3058,13 @@ var wellnessAPI =(function(wellnessAPI) {
           // Parse data for timeline
           try {
             var current = json[i].common;
-            var day = Date.parse(current.date.data);
+            var day = Date.parse(current.date);
             if(day != null) {
               var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-              series.minutesAsleep.push([utcDay, isNaN(current.minutesAsleep.data) == false ? current.minutesAsleep.data : null]);
-              series.minutesAwake.push([utcDay, isNaN(current.minutesAwake.data) == false ? current.minutesAwake.data : null]);
-              series.efficiency.push([utcDay, isNaN(current.efficiency.data) == false ? Math.round(current.efficiency.data * 100) / 100 : null]);
-              series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep.data) == false ? current.minutesToFallAsleep.data : null]);
+              series.minutesAsleep.push([utcDay, isNaN(current.minutesAsleep) == false ? current.minutesAsleep : null]);
+              series.minutesAwake.push([utcDay, isNaN(current.minutesAwake) == false ? current.minutesAwake : null]);
+              series.efficiency.push([utcDay, isNaN(current.efficiency) == false ? Math.round(current.efficiency * 100) / 100 : null]);
+              series.minutesToFallAsleep.push([utcDay, isNaN(current.minutesToFallAsleep) == false ? current.minutesToFallAsleep : null]);
             }
           } catch(err) {
             console.log('ERROR: Sleep data, long view', err);
@@ -3185,10 +3179,10 @@ var wellnessAPI =(function(wellnessAPI) {
             var day = Date.parse(current.date);
             if(day != null) {
               var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-              series.steps.push([utcDay, isNaN(current.fitbit.summary.data.steps) == false ? current.fitbit.summary.data.steps : null]);
-              series.minutesSedentary.push([utcDay, isNaN(current.fitbit.summary.data.sedentaryMinutes) == false ? current.fitbit.summary.data.sedentaryMinutes : null]);
-              series.activityCalories.push([utcDay, isNaN(current.fitbit.summary.data.activityCalories) == false ? current.fitbit.summary.data.activityCalories : null]);
-              series.activeScore.push([utcDay, isNaN(current.fitbit.summary.data.activeScore) == false ? current.fitbit.summary.data.activeScore : null]);
+              series.steps.push([utcDay, isNaN(current.fitbit.summary.steps) == false ? current.fitbit.summary.steps : null]);
+              series.minutesSedentary.push([utcDay, isNaN(current.fitbit.summary.sedentaryMinutes) == false ? current.fitbit.summary.sedentaryMinutes : null]);
+              series.activityCalories.push([utcDay, isNaN(current.fitbit.summary.activityCalories) == false ? current.fitbit.summary.activityCalories : null]);
+              series.activeScore.push([utcDay, isNaN(current.fitbit.summary.activeScore) == false ? current.fitbit.summary.activeScore : null]);
             }
           } catch(err) {
             // console.log(err)
@@ -3223,17 +3217,24 @@ var wellnessAPI =(function(wellnessAPI) {
         for(var i = 0; i < json.length; i++) {
           try {
             var current = json[i];
-            var day = Date.parse(current.date);
-            // TODO, we should loop the weight / pulse / pressure measurements as well
-            if(day != null) {
-              var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
-              series.weight.push([utcDay, isNaN(current.withings.weight[0].data.value) == false ? Math.round(current.withings.weight[0].data.value * 100) / 100 : null]);
-              series.pulse.push([utcDay, isNaN(current.withings.pulse[0].data.value) == false ? current.withings.pulse[0].data.value : null]);
-              series.diasPressure.push([utcDay, isNaN(current.withings.diasPressure[0].data.value) == false ? current.withings.diasPressure[0].data.value : null]);
-              series.sysPressure.push([utcDay, isNaN(current.withings.sysPressure[0].data.value) == false ? current.withings.sysPressure[0].data.value : null]);
+            if(typeof current.withings !== 'undefined') {
+              for(var j = 0; j < current.withings.length; j++) {
+                var day = Date.parse(current.withings[j].date);
+                if(day != null) {
+                  var utcDay = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), day.getHours(), day.getMinutes());
+                  if(!isNaN(current.withings[j].weight))
+                    series.weight.push([utcDay, Math.round(current.withings[j].weight * 100) / 100]);
+                  if(!isNaN(current.withings[j].pulse))
+                    series.pulse.push([utcDay, current.withings[j].pulse]);
+                  if(!isNaN(current.withings[j].diasPressure))
+                    series.diasPressure.push([utcDay, current.withings[j].diasPressure]);
+                  if(!isNaN(current.withings[j].sysPressure))
+                    series.sysPressure.push([utcDay, current.withings[j].sysPressure]);
+                }
+              }
             }
           } catch(err) {
-            // console.log(err);
+            console.log(err);
           }
         }
         if(series.weight.length > 0)
