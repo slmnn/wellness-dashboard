@@ -26,7 +26,7 @@ var analysisUI = (function(analysisUI) {
     });
     amplify.subscribe('analysis_possible', function(d) {
       if($('#analysis_possible_' + d.type).length == 0) {
-        var HTML = '<div id="analysis_possible_' + d.id + '" style="margin-bottom: 10px; margin-top: 6px;"><b>Possible Analysis</b></br></div>';
+        var HTML = '<div id="analysis_possible_' + d.id + '" style="margin-bottom: 10px; margin-top: 6px;"><b>Possible Analysis (' + d.type + ')</b></br></div>';
         $("#analysis-container").append(HTML);
       }
       $("#analysis_possible_" + d.id).append(

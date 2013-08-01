@@ -9,6 +9,7 @@ weather_history - Renders Weather data provided
 
 Public functions:
 init - initializes the component
+clear - return to the init state
 
 */
 
@@ -18,10 +19,11 @@ var weatherUI = (function(weatherUI) {
       var targetDivID = tabUI.newTab('Weather');
       var HTML = $('<div class="weather_variables-container" id="weather_variables-container"></div>');
       $('#' + targetDivID).append(HTML);
+      $('#weather_variables-container').append($('<div class="table-wrapper" id="weather-no_data"><p><b>No weather data available!</b></p></div>'));
     }
 		amplify.subscribe('weather_history', function(data) {
       if(typeof data.history !== 'undefined') {
-        
+        $('#weather-no_data').remove();
         var summary = data.history.dailysummary[0];
         console.log('Weather data for ' + summary.date, summary);
         var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -81,6 +83,7 @@ var weatherUI = (function(weatherUI) {
 		init: _init,
     clear: function() {
       $("#weather_variables-container").empty();
+      $('#weather_variables-container').append($('<div class="table-wrapper" id="weather-no_data"><p><b>No weather data available!</b></p></div>'));
     }
 	}
 }());

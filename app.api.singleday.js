@@ -33,7 +33,7 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
    			},
         statusCode: {
           404: function() {
-            console.log("404" + myurl);
+            console.log("404 " + myurl);
           }
 				},
         // Use "Loading" text to indicate the action
@@ -136,26 +136,28 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
         var analysis = $.parseJSON(data);
       else 
         var analysis = data;
-      for(var i = 0; i < analysis.required_user_action.length; i++) {
-        var act = analysis.required_user_action[i];
-        var baseURL = Common.determineBaseURL();
-        amplify.publish('analysis_possible', {
-          'id': act.id,
-          'path': baseURL.substring(0,baseURL.length-1) + act.path + '?dashboard=true',
-          'message':act.message,
-          'type': Common.capitaliseFirstLetter(act.type)
-        });
-      }
-      for(var i = 0; i < analysis.latest.length; i++) {
-        var ana = analysis.latest[i];
-        if(ana == null) continue;
-        amplify.publish('analysis_available', {
-          'id': ana.id,
-          'type': Common.capitaliseFirstLetter(ana.type),
-          'name': Common.capitaliseFirstLetter(ana.name),
-          'value': ana.value,
-          'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
-        });
+      for(var j = 0; j < analysis.length; j++) {
+        for(var i = 0; i < analysis[j].required_user_action.length; i++) {
+          var act = analysis[j].required_user_action[i];
+          var baseURL = Common.determineBaseURL();
+          amplify.publish('analysis_possible', {
+            'id': act.id,
+            'path': baseURL.substring(0,baseURL.length-1) + act.path + '?dashboard=true',
+            'message':act.message,
+            'type': Common.capitaliseFirstLetter(act.type)
+          });
+        }
+        for(var i = 0; i < analysis[j].latest.length; i++) {
+          var ana = analysis[j].latest[i];
+          if(ana == null) continue;
+          amplify.publish('analysis_available', {
+            'id': ana.id,
+            'type': Common.capitaliseFirstLetter(ana.type),
+            'name': Common.capitaliseFirstLetter(ana.name),
+            'value': ana.value,
+            'date': '(' + Common.parseUTCToLocalTime(ana.date).toString('MM/dd HH:mm') + ')'
+          });
+        }        
       }
 		});
 		_getData('api/analysis/sleepeffma/' + daypath + '/days/1/7', function(data) {
@@ -1034,69 +1036,6 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
     
     twitterUI.init();
     _getTwitterData();
-    
-    // Comment the following out to retrieve all data despite of linked services
-    
-    /*    
-    if(userData.calendars.length > 0) {
-      calendarUI.init();
-      _getCalendarData();
-    }
-    
-		if(userData.beddit) {
-     	_getSleepData();
-			$("#beddit").css({"visibility":"visible"});
-		}
-		else {
-			$("#beddit").css({"display":"none"});
-		}
-    
-		if(userData.fitbit) {
-      bulletSparkUI.init();
-			_getActivityData();
-			$("#fitbit").css({"visibility":"visible"});
-		}
-		else {
-			$("#fitbit").css({"display":"none"});
-		}
-    
-		if(userData.withings) {
-			_getMeasuresData();
-			$("#withings").css({"visibility":"visible"});
-			gaugeUI.init();
-		}
-		else {
-			$("#withings").css({"display":"none"});
-		}
-    
-		if(userData.fitbit || userData.beddit) {
-      // Highcharts needs some fake data to be initialized properly
-      var options = {
-				'title': 'Wellness timeline', 
-				'subtitle': 'Activities, sleeping, etc...', 
-				'start': _currentday.clone().clearTime().add({days:-1,hours:-3}),
-				'end': _currentday.clone().clearTime().add({days:1,hours:6}),
-				'yAxisTitle':'',
-				'initSeries': [
-					{'type':'line','name':'Pulse','data': [["2013-03-26T06:20:00", 0], ["2013-03-26T06:25:00", 0], ["2013-03-26T06:30:00", 0]]}
-				]
-			};
-			highchartsUI.init(options);
-			highchartsUI.clear(); // Removing the data we just added
-			
-			_ganttUI.init('gantt');
-      
-			sleepUI.init();
-			
-			analysisUI.init();
-			_getAnalysisData();
-			
-			if(userData.twitter) {
-        twitterUI.init();
-        _getTwitterData();
-			}
-		}
-    */
 	};
 
   // This function is used to refresh the whole view
@@ -1104,37 +1043,10 @@ var wellnessAPISingleDay = (function(wellnessAPISingleDay) {
 		var x = document.getElementById("datetext");
 		x.innerHTML = "Analysis for " + _currentday.toDateString() + ".";
     
-
-    // Comment the following out to retrieve all data despite of the services linked
-/*		
-    if(userData.fitbit || userData.beddit) {
-      highchartsUI.clear();
-      _ganttUI.clear();
-      _getAnalysisData();
-      _getSleepData();
-		}
-    
-		if(userData.withings) {
-			_getMeasuresData();
-		}
-
-		if(userData.fitbit) {
-			_getActivityData();
-		}
-
-    if(userData.calendars.length > 0) {
-      calendarUI.clear();
-      _getCalendarData();
-    }
-    
-    if(userData.twitter) {
-      twitterUI.clear();
-      _getTwitterData();
-    }
-*/
-    
     highchartsUI.clear();
     _ganttUI.clear();
+    
+    bulletSparkUI.clear();
     
     _getAnalysisData();
     _getSleepData();
