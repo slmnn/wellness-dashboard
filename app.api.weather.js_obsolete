@@ -1,0 +1,28 @@
+var weatherAPI = (function(weatherAPI) {
+	var baseurl = 'http://ec2-54-247-149-187.eu-west-1.compute.amazonaws.com:8080/';
+	var _weatherHistoryCB = function(data) {
+		amplify.publish('weather_history', data);
+	};
+	var _getWeatherHistory = function(address, date) {
+		// First we check the services available for the user
+		var day = ("0" + date.getDate()).slice(-2);
+		var month = ("0" + (date.getMonth() + 1)).slice(-2);
+		var apicall = 'history?address=' + address + '&year=' + date.getFullYear() + '&day=' + day + '&month=' + month;
+		var myurl = baseurl + apicall;
+		var cacheValue = amplify.store(myurl);
+		if(typeof(cacheValue) != 'undefined') {
+			console.log("Found from local store " + myurl, cacheValue);
+			_weatherHistoryCB(cacheValue);
+		} else {
+			$.getJSON(myurl,
+				function(data) {
+					amplify.store(myurl, data, { expires: 12*60*(60*1000*Math.random()) });
+					_weatherHistoryCB(data);
+				}
+			);		
+		}
+	};
+	return {
+		getWeatherHistory: _getWeatherHistory
+	}
+}());
